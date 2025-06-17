@@ -1,0 +1,6 @@
+*.o
+*.d
+*.a
+bamboo-lisp
+compile_commands.json
+.cache

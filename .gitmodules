@@ -1,0 +1,3 @@
+[submodule "3rdparty/algds"]
+	path = 3rdparty/algds
+	url = https://github.com/mistivia/algds.git
