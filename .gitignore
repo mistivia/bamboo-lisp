@@ -1,6 +1,7 @@
 *.o
 *.d
 *.a
+*.bin
 bamboo-lisp
 compile_commands.json
 .cache

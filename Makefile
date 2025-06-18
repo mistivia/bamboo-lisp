@@ -1,7 +1,8 @@
 mode ?= debug
 cc = gcc
 includes = -I3rdparty/algds/build/include/
-ldflags = -L3rdparty/algds/build/lib/ -lalgds
+3rdlibs = 3rdparty/algds/build/lib/libalgds.a
+ldflags = # -L3rdparty/algds/build/lib/ -lalgds
 ifeq ($(mode), debug)
 	cflags = $(includes) \
 		-g \
@@ -18,8 +19,8 @@ tests_bin=$(tests:.c=.bin)
 
 all: bamboo-lisp
 
-bamboo-lisp: 3rdparty/algds/build/lib/libalgds.a $(obj) src/main.c
-	gcc $(ldflags) $(cflags) -o $@ $(obj) src/main.c 
+bamboo-lisp:  $(obj) src/main.c 3rdparty/algds/build/lib/libalgds.a
+	gcc $(ldflags) $(cflags) -o $@ $^
 
 3rdparty/algds/build/lib/libalgds.a:
 	cd 3rdparty/algds && \
@@ -33,8 +34,10 @@ test: $(tests_bin)
 $(obj):%.o:%.c
 	$(cc) -c $(cflags) $< -MD -MF $@.d -o $@
 
-$(tests_bin):%.bin:%.c $(obj)
-	$(cc) $(ldflags) $(cflags) -Isrc/ $< $(obj) -MD -MF $@.d -o $@
+$(obj):%.o:$(3rdlibs)
+
+$(tests_bin):%.bin:%.c $(obj) $(3rdlibs)
+	$(cc) $(ldflags) $(cflags) -Isrc/ $< $(obj) $(3rdlibs) -MD -MF $@.d -o $@
 
 clean:
 	-rm $(shell find tests/ -name '*.bin')

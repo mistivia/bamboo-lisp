@@ -21,6 +21,7 @@ typedef struct {
 typedef struct {
     SExpRef args;
     SExpRef body;
+    SExpRef env;
 } SExpFunc;
 
 typedef struct {
@@ -30,7 +31,6 @@ typedef struct {
 
 typedef struct {
     SExpRef parent;
-    SExpRef child;
     SExpRef bindings;
 } SExpEnv;
 
@@ -42,10 +42,11 @@ typedef struct {
 } SExpBinding;
 
 typedef enum {
+    kEmptySExp,
     kIntegerSExp,
     kRealSExp,
     kBooleanSExp,
-    kNumberSExp,
+    kNilSExp,
     kCharSExp,
     kStringSExp,
     kSymbolSExp,
@@ -58,6 +59,7 @@ typedef enum {
 } SExpType;
 
 struct sexp {
+    bool marked;
     SExpType type;
     union {
         int64_t integer;
@@ -73,8 +75,10 @@ struct sexp {
 };
 
 void SExp_show(SExp self, FILE* fp);
+void SExpRef_show(SExpRef self, FILE* fp);
 
 VECTOR_DEF(SExp);
+VECTOR_DEF(SExpRef);
 
 #endif
 
