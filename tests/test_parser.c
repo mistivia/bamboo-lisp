@@ -43,7 +43,113 @@ int main() {
     parser.ctx = &interp;
 
     ParseResult res;
-    SExp sexp;
+    SExp sexp, a, b, c;
+
+    res = parse_str(&parser, "((1 2)\n . 3)");
+    assert(!ParseResult_is_err(res));
+    sexp = *Interp_ref(&interp, res.val);
+    assert(sexp.type == kPairSExp);
+    a = *Interp_ref(&interp, sexp.pair.car);
+    b = *Interp_ref(&interp, sexp.pair.cdr);
+    assert(a.type == kPairSExp);
+    c = *Interp_ref(&interp, a.pair.cdr);
+    a = *Interp_ref(&interp, a.pair.car);
+    assert(a.type == kIntegerSExp);
+    assert(a.integer == 1);
+    a = *Interp_ref(&interp, c.pair.car);
+    c = *Interp_ref(&interp, c.pair.cdr);
+    assert(a.type == kIntegerSExp);
+    assert(a.integer == 2);
+    assert(c.type == kNilSExp);
+    assert(b.type == kIntegerSExp);
+    assert(b.integer == 3);
+
+    res = parse_str(&parser, "((1 2) . 3)");
+    assert(!ParseResult_is_err(res));
+    sexp = *Interp_ref(&interp, res.val);
+    assert(sexp.type == kPairSExp);
+    a = *Interp_ref(&interp, sexp.pair.car);
+    b = *Interp_ref(&interp, sexp.pair.cdr);
+    assert(a.type == kPairSExp);
+    c = *Interp_ref(&interp, a.pair.cdr);
+    a = *Interp_ref(&interp, a.pair.car);
+    assert(a.type == kIntegerSExp);
+    assert(a.integer == 1);
+    a = *Interp_ref(&interp, c.pair.car);
+    c = *Interp_ref(&interp, c.pair.cdr);
+    assert(a.type == kIntegerSExp);
+    assert(a.integer == 2);
+    assert(c.type == kNilSExp);
+    assert(b.type == kIntegerSExp);
+    assert(b.integer == 3);
+
+    res = parse_str(&parser, "((1 2) 3)");
+    assert(!ParseResult_is_err(res));
+    sexp = *Interp_ref(&interp, res.val);
+    assert(sexp.type == kPairSExp);
+    a = *Interp_ref(&interp, sexp.pair.car);
+    b = *Interp_ref(&interp, sexp.pair.cdr);
+    assert(a.type == kPairSExp);
+    c = *Interp_ref(&interp, a.pair.cdr);
+    a = *Interp_ref(&interp, a.pair.car);
+    assert(a.type == kIntegerSExp);
+    assert(a.integer == 1);
+    a = *Interp_ref(&interp, c.pair.car);
+    c = *Interp_ref(&interp, c.pair.cdr);
+    assert(a.type == kIntegerSExp);
+    assert(a.integer == 2);
+    assert(c.type == kNilSExp);
+    a = *Interp_ref(&interp, b.pair.car);
+    b = *Interp_ref(&interp, b.pair.cdr);
+    assert(a.type == kIntegerSExp);
+    assert(a.integer == 3);
+    assert(b.type == kNilSExp);
+
+    ERROR_TEST("(1 2 . 3 4)");
+    ERROR_TEST("(1 2 . )");
+    ERROR_TEST("(1 2 .)");
+
+    res = parse_str(&parser, "(1 2 . 3)");
+    assert(!ParseResult_is_err(res));
+    sexp = *Interp_ref(&interp, res.val);
+    assert(sexp.type == kPairSExp);
+    a = *Interp_ref(&interp, sexp.pair.car);
+    b = *Interp_ref(&interp, sexp.pair.cdr);
+    assert(a.type == kIntegerSExp);
+    assert(a.integer == 1);
+    assert(b.type == kPairSExp);
+    a = *Interp_ref(&interp, b.pair.car);
+    b = *Interp_ref(&interp, b.pair.cdr);
+    assert(a.type == kIntegerSExp);
+    assert(a.integer == 2);
+    assert(b.type == kIntegerSExp);
+    assert(b.integer == 3);
+
+    res = parse_str(&parser, "(1 . 2)");
+    assert(!ParseResult_is_err(res));
+    sexp = *Interp_ref(&interp, res.val);
+    assert(sexp.type == kPairSExp);
+    a = *Interp_ref(&interp, sexp.pair.car);
+    b = *Interp_ref(&interp, sexp.pair.cdr);
+    assert(a.type == kIntegerSExp);
+    assert(a.integer == 1);
+    assert(b.type == kIntegerSExp);
+    assert(b.integer == 2);
+
+    res = parse_str(&parser, "(1 2)");
+    assert(!ParseResult_is_err(res));
+    sexp = *Interp_ref(&interp, res.val);
+    assert(sexp.type == kPairSExp);
+    a = *Interp_ref(&interp, sexp.pair.car);
+    b = *Interp_ref(&interp, sexp.pair.cdr);
+    assert(a.type == kIntegerSExp);
+    assert(a.integer == 1);
+    a = *Interp_ref(&interp, b.pair.car);
+    b = *Interp_ref(&interp, b.pair.cdr);
+    assert(a.type == kIntegerSExp);
+    assert(a.integer == 2);
+    assert(b.type == kNilSExp);
+
 
     ATOM_TEST("1.11", kRealSExp, real, 1.11);
     ATOM_TEST("-1.11", kRealSExp, real, -1.11);
@@ -75,6 +181,11 @@ int main() {
     ERROR_TEST("-abc");
     ERROR_TEST("@1");
     ERROR_TEST("a|");
+
+    res = parse_str(&parser, "()");
+    assert(!ParseResult_is_err(res));
+    sexp = *Interp_ref(&interp, res.val);
+    assert(sexp.type == kNilSExp);
 
     Interp_free(&interp);
     Parser_free(&parser);

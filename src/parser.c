@@ -118,7 +118,17 @@ static ParseResult expect_space(Parser *parser) {
         return ParseErr(parser, "Unexpected EOF.\n.");
     }
     if (isspace(Parser_peek(parser))) {
-        Parser_getchar(parser);
+        return ParseOk(parser->ctx->nil);
+    }
+    return ParseErr(parser, "Expect space.\n");
+}
+
+static ParseResult expect_space_or_end(Parser *parser) {
+    if (Parser_peek(parser) == EOF) {
+        return ParseErr(parser, "Unexpected EOF.\n.");
+    }
+    if (isspace(Parser_peek(parser))
+            || Parser_peek(parser) == ')') {
         return ParseOk(parser->ctx->nil);
     }
     return ParseErr(parser, "Expect space.\n");
@@ -127,6 +137,7 @@ static ParseResult expect_space(Parser *parser) {
 static SExpRef build_list_from_vector(Interp *ctx, SExpRefVector elems) {
     int i = SExpRefVector_len(&elems) - 1;
     SExpRef ret = *SExpRefVector_ref(&elems, i);
+    i--;
     for (; i >= 0; i--) {
         SExpRef cur = *SExpRefVector_ref(&elems, i);
         ret = cons(ctx, cur, ret);
@@ -159,7 +170,7 @@ ParseResult parse_list(Parser *parser) {
         ret = parse_sexp(parser);
         if (ParseResult_is_err(ret)) goto end;
         SExpRefVector_push_back(&elems, ret.val);
-        ret = expect_space(parser);
+        ret = expect_space_or_end(parser);
         if (ParseResult_is_err(ret)) goto end;
         skip_spaces(parser);
     }
@@ -183,6 +194,7 @@ static char *read_token(Parser *parser) {
     int i = 0;
     while (!isspace(Parser_peek(parser))
             && Parser_peek(parser) != EOF
+            && Parser_peek(parser) != ')'
             && i < BUFSIZE - 1) {
         parser->token_buf[i] = Parser_getchar(parser);
         i++;
