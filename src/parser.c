@@ -5,6 +5,7 @@
 #include <stdarg.h>
 
 #include <readline/readline.h>
+#include <readline/history.h>
 
 #include "sexp.h"
 
@@ -56,6 +57,7 @@ void Parser_set_file(Parser *parser, FILE *fp) {
 }
 
 void Parser_set_readline(Parser *parser) {
+    stifle_history(100);
     parser->parse_type = kParseReadline;
     parser->string = NULL;
     parser->str_cursor = NULL;
@@ -78,6 +80,7 @@ int Parser_getchar(Parser *ctx) {
                 ctx->readline_eof = true;
                 return EOF;
             }
+            if (s[0] != '\0') { add_history(s); }
             ctx->string = s;
             ctx->str_cursor = s;
         }
@@ -87,6 +90,7 @@ int Parser_getchar(Parser *ctx) {
                 ctx->readline_eof = true;
                 return EOF;
             }
+            if (s[0] != '\0') { add_history(s); }
             free((void*)ctx->string);
             ctx->string = s;
             ctx->str_cursor = s;
@@ -117,6 +121,7 @@ int Parser_peek(Parser *ctx) {
                 ctx->readline_eof = true;
                 return EOF;
             }
+            if (s[0] != '\0') { add_history(s); }
             ctx->string = s;
             ctx->str_cursor = s;
         }

@@ -9,7 +9,6 @@ int main() {
     Interp_init(&interp);
     Parser_init(&parser);
     parser.ctx = &interp;
-
     Parser_set_readline(&parser);
     SExpRef sexp, res;
     ParseResult parse_result;
