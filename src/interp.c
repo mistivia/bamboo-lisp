@@ -14,6 +14,8 @@
 #define CONS(_x, _y) (lisp_cons(interp, (_x), (_y)))
 #define NILP(_x) (lisp_nilp(interp, (_x)))
 #define ERRORP(_x) (REF((_x))->type == kErrSExp)
+#define PUSH_REG(_x) { interp->reg = CONS((_x), interp->reg); }
+#define POP_REG() { interp->reg = CDR(interp->reg);  }
 
 #define CAR(_x) (lisp_car(interp, (_x)))
 #define CDR(_x) (lisp_cdr(interp, (_x)))
@@ -56,6 +58,8 @@ void Interp_init(Interp *self) {
     self->stack = lisp_cons(self, self->top_level, self->nil);
     self->reg = self->nil;
 
+    Interp_add_primitive(self, "list", primitive_list);
+    Interp_add_primitive(self, "progn", primitive_progn);
     Interp_add_primitive(self, "setq", primitive_setq);
     Interp_add_primitive(self, "let", primitive_let);
     Interp_add_primitive(self, "car", primitive_car);
@@ -180,12 +184,15 @@ void lisp_to_string_impl(str_builder_t *sb, Int2IntHashTable *visited, Interp *i
             }
             if (REF(cur)->type == kNilSExp) {
                 sb->buf[sb->size - 1] = ')';
+                str_builder_append_char(sb, '\0');
             } else if (REF(cur)->type != kPairSExp) {
                 str_builder_append(sb, ". ");
                 lisp_to_string_impl(sb, visited, interp, cur);
                 str_builder_append(sb, ")");
+                str_builder_append_char(sb, '\0');
             } else {
                 str_builder_append(sb, "<%d>)", cur.idx);
+                str_builder_append_char(sb, '\0');
             }
         }
     }
@@ -269,9 +276,9 @@ SExpRef lisp_eval_args(Interp *interp, SExpRef args) {
     SExpRef cur = args;
     while (!NILP(cur)) {
         // save ret in register
-        interp->reg = CONS(ret, interp->reg);
+        PUSH_REG(ret);
         SExpRef evalres = lisp_eval(interp, CAR(cur));
-        interp->reg = CDR(interp->reg);
+        POP_REG();
         if (ERRORP(evalres)) {
             ret = evalres;
             goto end;
@@ -292,6 +299,10 @@ int lisp_length(Interp *interp, SExpRef lst) {
         lst = CDR(lst);
     }
     return cnt;
+}
+
+SExpRef primitive_list(Interp *interp, SExpRef args) {
+    return lisp_eval_args(interp, args);
 }
 
 SExpRef primitive_car(Interp *interp, SExpRef args) {
@@ -401,8 +412,8 @@ SExpRef primitive_sub(Interp *interp, SExpRef args) {
 }
 
 // TODO:
-// - setq
 // - cond
+// - progn
 // - if
 // - while
 // - lambda
@@ -412,6 +423,17 @@ SExpRef primitive_sub(Interp *interp, SExpRef args) {
 // - defvar
 // - defmacro
 // - macroexpand-1
+
+SExpRef primitive_progn(Interp *interp, SExpRef args) {
+    SExpRef iter = args;
+    SExpRef ret;
+    while (!NILP(iter)) {
+        ret = lisp_eval(interp, CAR(iter));
+        if (ERRORP(ret)) return ret;
+        iter = CDR(iter);
+    }
+    return ret;
+}
 
 SExpRef primitive_setq(Interp *interp, SExpRef args) {
     if (lisp_length(interp, args) != 2) goto error;
@@ -489,6 +511,7 @@ error:
 SExpRef lisp_eval(Interp *interp, SExpRef sexp) {
     SExpRef ret;
     SExpType type;
+    PUSH_REG(sexp);
     type = REF(sexp)->type;
     if (type == kEnvSExp || type == kEnvSExp || type == kBindingSExp) {
         ret = new_error(interp, "type error: cannot eval.\n");
@@ -532,6 +555,7 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp) {
     }
     ret = NIL;
 end:
+    POP_REG();
     Interp_gc(interp, ret);
     return ret;
 }

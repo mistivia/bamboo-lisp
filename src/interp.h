@@ -40,6 +40,8 @@ SExp* Interp_ref(Interp *self, SExpRef ref);
 void Interp_gc(Interp *self, SExpRef tmp_root);
 void Interp_add_primitive(Interp *self, const char *name, LispPrimitive fn);
 
+SExpRef primitive_list(Interp *interp, SExpRef sexp);
+SExpRef primitive_progn(Interp *interp, SExpRef sexp);
 SExpRef primitive_setq(Interp *interp, SExpRef sexp);
 SExpRef primitive_let(Interp *interp, SExpRef sexp);
 SExpRef primitive_car(Interp *interp, SExpRef sexp);
