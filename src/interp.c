@@ -13,7 +13,9 @@
 #define REF(_x) (Interp_ref(interp, (_x)))
 #define CONS(_x, _y) (lisp_cons(interp, (_x), (_y)))
 #define NILP(_x) (lisp_nilp(interp, (_x)))
+#define TRUEP(_x) (lisp_truep(interp, (_x)))
 #define ERRORP(_x) (REF((_x))->type == kErrSExp)
+
 #define PUSH_REG(_x) { interp->reg = CONS((_x), interp->reg); }
 #define POP_REG() { interp->reg = CDR(interp->reg);  }
 
@@ -58,6 +60,7 @@ void Interp_init(Interp *self) {
     self->stack = lisp_cons(self, self->top_level, self->nil);
     self->reg = self->nil;
 
+    Interp_add_primitive(self, "cond", primitive_cond);
     Interp_add_primitive(self, "list", primitive_list);
     Interp_add_primitive(self, "progn", primitive_progn);
     Interp_add_primitive(self, "setq", primitive_setq);
@@ -103,6 +106,12 @@ void Interp_add_primitive(Interp *self, const char *name, LispPrimitive fn) {
 
 void Interp_gc(Interp *interp, SExpRef tmproot) {
     // TODO
+}
+
+bool lisp_truep(Interp *interp, SExpRef a) {
+    if (REF(a)->type == kNilSExp) return false;
+    if (REF(a)->type == kBooleanSExp && !REF(a)->boolean) return false;
+    return true;
 }
 
 SExpRef lisp_cons(Interp *interp, SExpRef a, SExpRef b) {
@@ -423,6 +432,25 @@ SExpRef primitive_sub(Interp *interp, SExpRef args) {
 // - defvar
 // - defmacro
 // - macroexpand-1
+
+SExpRef primitive_cond(Interp *interp, SExpRef args) {
+    if (lisp_length(interp, args) < 1) goto error;
+    SExpRef iter = args;
+    while (!NILP(iter)) {
+        SExpRef pair = CAR(iter);
+        if (!lisp_check_list(interp, pair)) goto error;
+        if (lisp_length(interp, pair) != 2) goto error;
+        SExpRef condition = CAR(pair);
+        SExpRef exp = CADR(pair);
+        condition = lisp_eval(interp, condition);
+        if (ERRORP(condition)) return condition;
+        if (TRUEP(condition)) return lisp_eval(interp, exp);
+        iter = CDR(iter);
+    }
+    return NIL;
+error:
+    return new_error(interp, "cond: syntax error.\n");
+}
 
 SExpRef primitive_progn(Interp *interp, SExpRef args) {
     SExpRef iter = args;
