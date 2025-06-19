@@ -140,7 +140,7 @@ static SExpRef build_list_from_vector(Interp *ctx, SExpRefVector elems) {
     i--;
     for (; i >= 0; i--) {
         SExpRef cur = *SExpRefVector_ref(&elems, i);
-        ret = cons(ctx, cur, ret);
+        ret = lisp_cons(ctx, cur, ret);
     }
     return ret;
 }
@@ -332,7 +332,7 @@ ParseResult parse_abbrev(Parser *parser, const char *name) {
     ret = parse_sexp(parser);
     if (ParseResult_is_err(ret)) return ret;
     SExpRef sym = new_symbol(parser->ctx, name);
-    return ParseOk(cons(parser->ctx, sym, ret.val));
+    return ParseOk(lisp_cons(parser->ctx, sym, ret.val));
 }
 
 ParseResult parse_quote(Parser *parser) {

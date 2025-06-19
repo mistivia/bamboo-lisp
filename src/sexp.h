@@ -56,6 +56,7 @@ typedef enum {
     kEnvSExp,
     kBindingSExp,
     kMacroSExp,
+    kErrSExp,
 } SExpType;
 
 struct sexp {
