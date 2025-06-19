@@ -13,6 +13,7 @@
 #define REF(_x) (Interp_ref(interp, (_x)))
 #define CONS(_x, _y) (lisp_cons(interp, (_x), (_y)))
 #define NILP(_x) (lisp_nilp(interp, (_x)))
+#define EVAL(_x) (lisp_eval(interp, (_x)))
 #define TRUEP(_x) (lisp_truep(interp, (_x)))
 #define ERRORP(_x) (REF((_x))->type == kErrSExp)
 
@@ -60,16 +61,23 @@ void Interp_init(Interp *self) {
     self->stack = lisp_cons(self, self->top_level, self->nil);
     self->reg = self->nil;
 
+    Interp_add_primitive(self, "if", primitive_if);
     Interp_add_primitive(self, "cond", primitive_cond);
-    Interp_add_primitive(self, "list", primitive_list);
     Interp_add_primitive(self, "progn", primitive_progn);
     Interp_add_primitive(self, "setq", primitive_setq);
     Interp_add_primitive(self, "let", primitive_let);
-    Interp_add_primitive(self, "car", primitive_car);
-    Interp_add_primitive(self, "cdr", primitive_cdr);
-    Interp_add_primitive(self, "cons", primitive_cons);
-    Interp_add_primitive(self, "+", primitive_add);
-    Interp_add_primitive(self, "-", primitive_sub);
+
+    Interp_add_userfunc(self, "car", userfunc_car);
+    Interp_add_userfunc(self, "list", userfunc_list);
+    Interp_add_userfunc(self, "cdr", userfunc_cdr);
+    Interp_add_userfunc(self, "cons", userfunc_cons);
+    Interp_add_userfunc(self, "+", userfunc_add);
+    Interp_add_userfunc(self, "-", userfunc_sub);
+}
+
+void Interp_add_userfunc(Interp *interp, const char *name, LispUserFunc fn) {
+    SExpRef userfunc = new_userfunc(interp, fn);
+    lisp_defun(interp, name, userfunc);
 }
 
 void Interp_free(Interp *self) {
@@ -218,6 +226,22 @@ const char* lisp_to_string(Interp *interp, SExpRef val) {
     return sb.buf;
 }
 
+void lisp_defun(Interp *interp, const char *name, SExpRef val) {
+    SExpRef binding = REF(interp->top_level)->env.bindings;
+    while (REF(binding)->type != kNilSExp) {
+        if (strcmp(name, REF(REF(binding)->binding.name)->str) == 0) {
+            REF(binding)->binding.func = val;
+            return;
+        }
+        binding = REF(binding)->binding.next;
+    }
+    binding = REF(interp->top_level)->env.bindings;
+    SExpRef newbinding = new_binding(interp, new_symbol(interp, name), NIL);
+    REF(newbinding)->binding.func = val;
+    REF(newbinding)->binding.next = binding;
+    REF(interp->top_level)->env.bindings = newbinding;
+}
+
 SExpRef lisp_setq(Interp *interp, const char *name, SExpRef val) {
     SExpRef env = CAR(interp->stack);
     while (REF(env)->type != kNilSExp) {
@@ -286,7 +310,7 @@ SExpRef lisp_eval_args(Interp *interp, SExpRef args) {
     while (!NILP(cur)) {
         // save ret in register
         PUSH_REG(ret);
-        SExpRef evalres = lisp_eval(interp, CAR(cur));
+        SExpRef evalres = EVAL(CAR(cur));
         POP_REG();
         if (ERRORP(evalres)) {
             ret = evalres;
@@ -310,35 +334,29 @@ int lisp_length(Interp *interp, SExpRef lst) {
     return cnt;
 }
 
-SExpRef primitive_list(Interp *interp, SExpRef args) {
-    return lisp_eval_args(interp, args);
+SExpRef userfunc_list(Interp *interp, SExpRef args) {
+    return args;
 }
 
-SExpRef primitive_car(Interp *interp, SExpRef args) {
+SExpRef userfunc_car(Interp *interp, SExpRef args) {
     if (lisp_length(interp, args) != 1) {
         return new_error(interp, "car: wrong argument number.\n");
     }
-    args = lisp_eval_args(interp, args);
     if (ERRORP(args)) return args;
     return CAR(CAR(args));
 }
 
-SExpRef primitive_cdr(Interp *interp, SExpRef args) {
+SExpRef userfunc_cdr(Interp *interp, SExpRef args) {
     if (lisp_length(interp, args) != 1) {
         return new_error(interp, "cdr: wrong argument number.\n");
     }
-    args = lisp_eval_args(interp, args);
-    if (ERRORP(args)) return args;
     return CDR(CAR(args));
 }
 
-SExpRef primitive_cons(Interp *interp, SExpRef args) {
+SExpRef userfunc_cons(Interp *interp, SExpRef args) {
     if (lisp_length(interp, args) != 2) {
         return new_error(interp, "cons: wrong argument number.\n");
     }
-    SExpRef ret;
-    args = lisp_eval_args(interp, args);
-    if (ERRORP(args)) return args;
     return CONS(CAR(args), CADR(args));
 }
 
@@ -370,10 +388,8 @@ static SExp raw_sub(SExp a, SExp b) {
     }
 }
 
-SExpRef primitive_add(Interp *interp, SExpRef args) {
+SExpRef userfunc_add(Interp *interp, SExpRef args) {
     SExpRef ret;
-    args = lisp_eval_args(interp, args);
-    if (ERRORP(args)) return args;
     SExp acc = {.type = kIntegerSExp, .integer = 0};
     SExpRef cur = args;
     while (!NILP(cur)) {
@@ -392,10 +408,8 @@ SExpRef primitive_add(Interp *interp, SExpRef args) {
     return ret;
 }
 
-SExpRef primitive_sub(Interp *interp, SExpRef args) {
+SExpRef userfunc_sub(Interp *interp, SExpRef args) {
     SExpRef ret;
-    args = lisp_eval_args(interp, args);
-    if (ERRORP(args)) return args;
     SExpRef cur = args;
     while (!NILP(cur)) {
         if (REF(CAR(cur))->type != kIntegerSExp && REF(CAR(cur))->type != kRealSExp) {
@@ -421,9 +435,6 @@ SExpRef primitive_sub(Interp *interp, SExpRef args) {
 }
 
 // TODO:
-// - cond
-// - progn
-// - if
 // - while
 // - lambda
 // - defun
@@ -432,6 +443,20 @@ SExpRef primitive_sub(Interp *interp, SExpRef args) {
 // - defvar
 // - defmacro
 // - macroexpand-1
+
+SExpRef primitive_if(Interp *interp, SExpRef args) {
+    if (lisp_length(interp, args) != 3) goto error;
+    SExpRef cond = CAR(args);
+    SExpRef tb = CADR(args);
+    SExpRef fb = CADDR(args);
+    cond = EVAL(cond);
+    if (ERRORP(cond)) return cond;
+    if (TRUEP(cond)) return EVAL(tb);
+    else return EVAL(fb);
+    return NIL;
+error:
+    return new_error(interp, "if: syntax error.\n");
+}
 
 SExpRef primitive_cond(Interp *interp, SExpRef args) {
     if (lisp_length(interp, args) < 1) goto error;
@@ -442,9 +467,9 @@ SExpRef primitive_cond(Interp *interp, SExpRef args) {
         if (lisp_length(interp, pair) != 2) goto error;
         SExpRef condition = CAR(pair);
         SExpRef exp = CADR(pair);
-        condition = lisp_eval(interp, condition);
+        condition = EVAL(condition);
         if (ERRORP(condition)) return condition;
-        if (TRUEP(condition)) return lisp_eval(interp, exp);
+        if (TRUEP(condition)) return EVAL(exp);
         iter = CDR(iter);
     }
     return NIL;
@@ -456,7 +481,7 @@ SExpRef primitive_progn(Interp *interp, SExpRef args) {
     SExpRef iter = args;
     SExpRef ret;
     while (!NILP(iter)) {
-        ret = lisp_eval(interp, CAR(iter));
+        ret = EVAL(CAR(iter));
         if (ERRORP(ret)) return ret;
         iter = CDR(iter);
     }
@@ -468,7 +493,7 @@ SExpRef primitive_setq(Interp *interp, SExpRef args) {
     SExpRef name = CAR(args);
     SExpRef exp = CADR(args);
     if (REF(name)->type != kSymbolSExp) goto error;
-    SExpRef value = lisp_eval(interp, exp);
+    SExpRef value = EVAL(exp);
     if (ERRORP(value)) return value;
     lisp_setq(interp, REF(name)->str, value);
     return NIL;
@@ -513,7 +538,7 @@ SExpRef primitive_let(Interp *interp, SExpRef args) {
     iter = bindings;
     while (!NILP(iter)) {
         SExpRef x = CAR(iter);
-        SExpRef val = lisp_eval(interp, CADR(x));
+        SExpRef val = EVAL(CADR(x));
         if (REF(val)->type == kErrSExp) goto end;
         lisp_setq(interp, REF(CAR(x))->str, val);
         iter = CDR(iter);
@@ -524,7 +549,7 @@ SExpRef primitive_let(Interp *interp, SExpRef args) {
     iter = body;
     while (!NILP(iter)) {
         SExpRef exp = CAR(iter);
-        ret = lisp_eval(interp, exp);
+        ret = EVAL(exp);
         if (REF(ret)->type == kErrSExp) goto end;
         iter = CDR(iter);
     }
@@ -576,6 +601,15 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp) {
                 ret = (*primitive_fn)(interp, CDR(sexp));
                 goto end;
             }
+        }
+        SExpRef fn = lisp_lookup_func(interp, symbol);
+        if (REF(fn)->type == kUserFuncSExp) {
+            SExpRef args = lisp_eval_args(interp, CDR(sexp));
+            if (ERRORP(args)) { ret = args; goto end; }
+            PUSH_REG(args);
+            ret = (*REF(fn)->userfunc)(interp, args);
+            POP_REG();
+            goto end;
         }
         // TODO: macro / func
         ret = new_error(interp, "eval: \"%s\" is not a primitive, function, or macro.\n", symbol);
@@ -631,6 +665,13 @@ SExpRef new_error(Interp *interp, const char *format, ...) {
     SExpRef ret = new_sexp(interp);
     REF(ret)->type = kErrSExp;
     REF(ret)->str = interp->errmsg_buf;
+    return ret;
+}
+
+SExpRef new_userfunc(Interp *interp, LispUserFunc val) {
+    SExpRef ret = new_sexp(interp);
+    REF(ret)->type = kUserFuncSExp;
+    REF(ret)->userfunc = val;
     return ret;
 }
 

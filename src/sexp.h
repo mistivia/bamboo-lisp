@@ -24,6 +24,10 @@ typedef struct {
     SExpRef env;
 } SExpFunc;
 
+struct interp;
+typedef struct interp Interp;
+typedef SExpRef (*LispUserFunc)(Interp *interp, SExpRef args);
+
 typedef struct {
     SExpRef args;
     SExpRef body;
@@ -53,6 +57,7 @@ typedef enum {
     kUserDataSExp,
     kPairSExp,
     kFuncSExp,
+    kUserFuncSExp,
     kEnvSExp,
     kBindingSExp,
     kMacroSExp,
@@ -71,6 +76,7 @@ struct sexp {
         const void *userdata;
         SExpPair pair;
         SExpFunc func;
+        LispUserFunc userfunc;
         SExpEnv env;
         SExpBinding binding;
         SExpMacro macro;
