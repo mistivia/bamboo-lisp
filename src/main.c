@@ -10,11 +10,10 @@ int main() {
     Parser_init(&parser);
     parser.ctx = &interp;
 
-    Parser_set_file(&parser, stdin);
+    Parser_set_readline(&parser);
     SExpRef sexp, res;
     ParseResult parse_result;
     while (1) {
-        printf("> ");
         parse_result = parse_sexp(&parser);
         if (parse_result.errmsg != NULL) {
             if (Parser_peek(&parser) == EOF) goto end;

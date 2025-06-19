@@ -56,6 +56,8 @@ void Interp_init(Interp *self) {
     self->stack = lisp_cons(self, self->top_level, self->nil);
     self->reg = self->nil;
 
+    Interp_add_primitive(self, "setq", primitive_setq);
+    Interp_add_primitive(self, "let", primitive_let);
     Interp_add_primitive(self, "car", primitive_car);
     Interp_add_primitive(self, "cdr", primitive_cdr);
     Interp_add_primitive(self, "cons", primitive_cons);
@@ -188,6 +190,7 @@ void lisp_to_string_impl(str_builder_t *sb, Int2IntHashTable *visited, Interp *i
         }
     }
 }
+
 
 const char* lisp_to_string(Interp *interp, SExpRef val) {
     str_builder_t sb;
@@ -397,6 +400,92 @@ SExpRef primitive_sub(Interp *interp, SExpRef args) {
     return new_error(interp, "-: wrong argument number.\n");
 }
 
+// TODO:
+// - setq
+// - cond
+// - if
+// - while
+// - lambda
+// - defun
+// - funcall
+// - apply
+// - defvar
+// - defmacro
+// - macroexpand-1
+
+SExpRef primitive_setq(Interp *interp, SExpRef args) {
+    if (lisp_length(interp, args) != 2) goto error;
+    SExpRef name = CAR(args);
+    SExpRef exp = CADR(args);
+    if (REF(name)->type != kSymbolSExp) goto error;
+    SExpRef value = lisp_eval(interp, exp);
+    if (ERRORP(value)) return value;
+    lisp_setq(interp, REF(name)->str, value);
+    return NIL;
+error:
+    return new_error(interp, "setq: syntax error.\n");
+}
+
+static const char *binding_name(Interp *interp, SExpRef binding) {
+    SExpRef namesym = REF(binding)->binding.name;
+    return REF(namesym)->str;
+}
+
+static bool is_binding_repeat(Interp *interp, SExpRef sym, SExpRef env) {
+    SExpRef binding = REF(env)->env.bindings;
+    while (!NILP(binding)) {
+        if (strcmp(REF(sym)->str, binding_name(interp, binding)) == 0) return true;
+        binding = REF(binding)->binding.next;
+    }
+    return false;
+}
+
+SExpRef primitive_let(Interp *interp, SExpRef args) {
+    if (lisp_length(interp, args) < 1) goto error;
+    SExpRef bindings = CAR(args);
+    SExpRef env = new_env(interp);
+    REF(env)->env.parent = CAR(interp->stack);
+
+    SExpRef iter = bindings;
+    while (!NILP(iter)) {
+        SExpRef x = CAR(iter);
+        if (!lisp_check_list(interp, x)) goto error;
+        if (lisp_length(interp, x) != 2) goto error;
+        if (REF(CAR(x))->type != kSymbolSExp) goto error;
+        if (is_binding_repeat(interp, CAR(x), env)) goto error;
+        SExpRef binding = new_binding(interp, CAR(x), NIL);
+        REF(binding)->binding.next = REF(env)->env.bindings;
+        REF(env)->env.bindings = binding;
+        iter = CDR(iter);
+    }
+    interp->stack = CONS(env, interp->stack);
+
+    iter = bindings;
+    while (!NILP(iter)) {
+        SExpRef x = CAR(iter);
+        SExpRef val = lisp_eval(interp, CADR(x));
+        if (REF(val)->type == kErrSExp) goto end;
+        lisp_setq(interp, REF(CAR(x))->str, val);
+        iter = CDR(iter);
+    }
+
+    SExpRef body = CDR(args);
+    SExpRef ret = NIL;
+    iter = body;
+    while (!NILP(iter)) {
+        SExpRef exp = CAR(iter);
+        ret = lisp_eval(interp, exp);
+        if (REF(ret)->type == kErrSExp) goto end;
+        iter = CDR(iter);
+    }
+end:
+    interp->stack = CDR(interp->stack);
+    return ret;
+
+error:
+    return new_error(interp, "let: syntax error. \n");
+}
+
 SExpRef lisp_eval(Interp *interp, SExpRef sexp) {
     SExpRef ret;
     SExpType type;
@@ -457,6 +546,22 @@ SExpRef new_sexp(Interp *interp) {
     int idx = *IntVector_ref(&interp->empty_space, IntVector_len(&interp->empty_space) - 1);
     IntVector_pop(&interp->empty_space);
     return (SExpRef){idx};
+}
+
+SExpRef new_env(Interp *interp) {
+    SExpRef ret = new_sexp(interp);
+    REF(ret)->type = kEnvSExp;
+    REF(ret)->env.parent = NIL;
+    REF(ret)->env.bindings = NIL;
+    return ret;
+}
+
+SExpRef new_binding(Interp *interp, SExpRef sym, SExpRef val) {
+    SExpRef ret = new_sexp(interp);
+    REF(ret)->type = kBindingSExp;
+    REF(ret)->binding.name = sym;
+    REF(ret)->binding.value = val;
+    return ret;
 }
 
 SExpRef new_boolean(Interp *interp, bool val) {

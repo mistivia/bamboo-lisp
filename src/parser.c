@@ -1,9 +1,12 @@
 #include "parser.h"
-#include "sexp.h"
 
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdarg.h>
+
+#include <readline/readline.h>
+
+#include "sexp.h"
 
 #define BUFSIZE 1024
 
@@ -36,6 +39,7 @@ void Parser_init(Parser *parser) {
 }
 
 void Parser_free(Parser *parser) {
+    if (parser->parse_type == kParseReadline) free((void*)parser->string);
     free(parser->token_buf);
     free(parser->errmsg_buf);
 }
@@ -51,6 +55,13 @@ void Parser_set_file(Parser *parser, FILE *fp) {
     parser->fp = fp;
 }
 
+void Parser_set_readline(Parser *parser) {
+    parser->parse_type = kParseReadline;
+    parser->string = NULL;
+    parser->str_cursor = NULL;
+    parser->readline_eof = false;
+}
+
 int Parser_getchar(Parser *ctx) {
     if (ctx->parse_type == kParseString) {
         if (*ctx->str_cursor == '\0') return EOF;
@@ -59,6 +70,31 @@ int Parser_getchar(Parser *ctx) {
         return ret;
     } else if (ctx->parse_type == kParseFile) {
         return fgetc(ctx->fp);
+    } else if (ctx->parse_type == kParseReadline) {
+        if (ctx->readline_eof) return EOF;
+        if (ctx->string == NULL) {
+            char *s = readline(">>> ");
+            if (s == NULL) {
+                ctx->readline_eof = true;
+                return EOF;
+            }
+            ctx->string = s;
+            ctx->str_cursor = s;
+        }
+        if (*ctx->str_cursor == '\0') {
+            char *s = readline(">>> ");
+            if (s == NULL) {
+                ctx->readline_eof = true;
+                return EOF;
+            }
+            free((void*)ctx->string);
+            ctx->string = s;
+            ctx->str_cursor = s;
+            return '\n';
+        }
+        int c = *ctx->str_cursor;
+        ctx->str_cursor++;
+        return c;
     }
     return EOF;
 }
@@ -73,6 +109,22 @@ int Parser_peek(Parser *ctx) {
         if (ret == EOF) return EOF;
         ungetc(ret, ctx->fp);
         return ret;
+    } else if (ctx->parse_type == kParseReadline) {
+        if (ctx->readline_eof) return EOF;
+        if (ctx->string == NULL) {
+            char *s = readline(">>> ");
+            if (s == NULL) {
+                ctx->readline_eof = true;
+                return EOF;
+            }
+            ctx->string = s;
+            ctx->str_cursor = s;
+        }
+        if (*ctx->str_cursor == '\0') {
+            return '\n';
+        }
+        int c = *ctx->str_cursor;
+        return c;
     }
     return EOF;
 }
@@ -243,6 +295,16 @@ static ParseResult parse_token(Parser *parser, const char *token) {
     }
     if (token[0] == '#') {
         if (len < 2) return ParseErr(parser, "Expect boolean or character.\n");
+        if (token[1] == '\'') {
+            if (len < 3) return ParseErr(parser, "Expect a symbol.\n");
+            if (!is_symbol_init(token[2])) return ParseErr(parser, "Expect a symbol.\n");
+            for (int i = 3; i < len; i++) {
+                if (!is_symbol_subsequent(token[i])) return ParseErr(parser, "Expect a symbol.\n");
+            }
+            SExpRef funcsym = new_symbol(parser->ctx, "function");
+            SExpRef sym = new_symbol(parser->ctx, token+2);
+            return ParseOk(lisp_cons(parser->ctx, funcsym, lisp_cons(parser->ctx, sym, parser->ctx->nil)));
+        }
         if (token[1] == 't') return ParseOk(new_boolean(parser->ctx, true));
         if (token[1] == 'f') return ParseOk(new_boolean(parser->ctx, false));
         if (token[1] == '\\') {
