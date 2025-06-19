@@ -45,6 +45,21 @@ int main() {
     ParseResult res;
     SExp sexp, a, b, c;
 
+    res = parse_str(&parser, "(+ 2)");
+    assert(!ParseResult_is_err(res));
+    sexp = *Interp_ref(&interp, res.val);
+    assert(sexp.type == kPairSExp);
+    a = *Interp_ref(&interp, sexp.pair.car);
+    b = *Interp_ref(&interp, sexp.pair.cdr);
+    assert(a.type == kSymbolSExp);
+    assert(strcmp("+", a.str) == 0);
+    a = *Interp_ref(&interp, b.pair.car);
+    b = *Interp_ref(&interp, b.pair.cdr);
+    assert(a.type == kIntegerSExp);
+    assert(a.integer == 2);
+    assert(b.type == kNilSExp);
+
+
     res = parse_str(&parser, "((1 2)\n . 3)");
     assert(!ParseResult_is_err(res));
     sexp = *Interp_ref(&interp, res.val);

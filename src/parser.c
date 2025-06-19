@@ -80,7 +80,7 @@ int Parser_peek(Parser *ctx) {
 ParseResult parse_sexp(Parser *parser) {
     skip_spaces(parser);
     if (Parser_peek(parser) == EOF) {
-        return ParseErr(parser, "Unexpected EOF.\n.");
+        return ParseErr(parser, "Unexpected EOF.\n");
     }
     int next = Parser_peek(parser);
     if (next == '(') {
@@ -104,7 +104,7 @@ ParseResult parse_sexp(Parser *parser) {
 
 static ParseResult expect_char(Parser *parser, int chr) {
     if (Parser_peek(parser) == EOF) {
-        return ParseErr(parser, "Unexpected EOF.\n.");
+        return ParseErr(parser, "Unexpected EOF.\n");
     }
     if (Parser_peek(parser) == chr) {
         Parser_getchar(parser);
@@ -115,7 +115,7 @@ static ParseResult expect_char(Parser *parser, int chr) {
 
 static ParseResult expect_space(Parser *parser) {
     if (Parser_peek(parser) == EOF) {
-        return ParseErr(parser, "Unexpected EOF.\n.");
+        return ParseErr(parser, "Unexpected EOF.\n");
     }
     if (isspace(Parser_peek(parser))) {
         return ParseOk(parser->ctx->nil);
@@ -125,7 +125,7 @@ static ParseResult expect_space(Parser *parser) {
 
 static ParseResult expect_space_or_end(Parser *parser) {
     if (Parser_peek(parser) == EOF) {
-        return ParseErr(parser, "Unexpected EOF.\n.");
+        return ParseErr(parser, "Unexpected EOF.\n");
     }
     if (isspace(Parser_peek(parser))
             || Parser_peek(parser) == ')') {
@@ -155,7 +155,7 @@ ParseResult parse_list(Parser *parser) {
     skip_spaces(parser);
     while (1) {
         if (Parser_peek(parser) == EOF) {
-            ret = ParseErr(parser, "Unexpected EOF.\n.");
+            ret = ParseErr(parser, "Unexpected EOF.\n");
             goto end;
         }
         if (Parser_peek(parser) == ')') {
@@ -252,13 +252,13 @@ static ParseResult parse_token(Parser *parser, const char *token) {
             if (strcmp(token+2, "space") == 0) return ParseOk(new_char(parser->ctx, ' '));
             if (strcmp(token+2, "tab") == 0) return ParseOk(new_char(parser->ctx, '\t'));
             if (strcmp(token+2, "return") == 0) return ParseOk(new_char(parser->ctx, '\r'));
-            return ParseErr(parser, "Unknown character name: %s\n.", token + 2);
+            return ParseErr(parser, "Unknown character name: %s.\n", token + 2);
         }
     }
     if (is_symbol_init(token[0])) {
         for (int i = 1; i < len; i++) {
             if (!is_symbol_subsequent(token[i])) {
-                return ParseErr(parser, "Not a symbol, containing illegal character: %s\n.", token);
+                return ParseErr(parser, "Not a symbol, containing illegal character: %s\n", token);
             }
         }
         return ParseOk(new_symbol(parser->ctx, token));
@@ -289,7 +289,7 @@ ParseResult parse_string(Parser *parser) {
         } else {
             Parser_getchar(parser);
             if (Parser_peek(parser) == EOF) {
-                return ParseErr(parser, "Unexpected EOF.\n.");
+                return ParseErr(parser, "Unexpected EOF.\n");
             }
             int c = Parser_getchar(parser);
             if (c == EOF) {
@@ -316,7 +316,7 @@ end:
 ParseResult parse_atom(Parser *parser) {
     ParseResult ret;
     if (Parser_peek(parser) == EOF) {
-        return ParseErr(parser, "Unexpected EOF.\n.");
+        return ParseErr(parser, "Unexpected EOF.\n");
     }
     if (Parser_peek(parser) == '"') return parse_string(parser);
     const char *token = read_token(parser);
@@ -332,7 +332,7 @@ ParseResult parse_abbrev(Parser *parser, const char *name) {
     ret = parse_sexp(parser);
     if (ParseResult_is_err(ret)) return ret;
     SExpRef sym = new_symbol(parser->ctx, name);
-    return ParseOk(lisp_cons(parser->ctx, sym, ret.val));
+    return ParseOk(lisp_cons(parser->ctx, sym, lisp_cons(parser->ctx, ret.val, parser->ctx->nil)));
 }
 
 ParseResult parse_quote(Parser *parser) {

@@ -22,13 +22,12 @@ typedef struct {
 VECTOR_DEF(PrimitiveEntry);
 
 struct interp {
-    bool gc_paused;
     SExpVector objs;
     PrimitiveEntryVector primitives;
     IntVector empty_space;
     String2IntHashTable symbols;
     SExpRef stack;
-    SExpRef evaluating;
+    SExpRef reg;
     SExpRef top_level;
     SExpRef nil;
     char *errmsg_buf;
@@ -38,9 +37,7 @@ struct interp {
 void Interp_init(Interp *self);
 void Interp_free(Interp *self);
 SExp* Interp_ref(Interp *self, SExpRef ref);
-void Interp_gc(Interp *self);
-void Interp_pause_gc(Interp *self);
-void Interp_restart_gc(Interp *self);
+void Interp_gc(Interp *self, SExpRef tmp_root);
 void Interp_add_primitive(Interp *self, const char *name, LispPrimitive fn);
 
 SExpRef primitive_car(Interp *interp, SExpRef sexp);
@@ -49,16 +46,20 @@ SExpRef primitive_cons(Interp *interp, SExpRef sexp);
 SExpRef primitive_add(Interp *interp, SExpRef sexp);
 SExpRef primitive_sub(Interp *interp, SExpRef sexp);
 
-SExpRef lisp_cons(Interp *ctx, SExpRef car, SExpRef cdr);
-SExpRef lisp_dup(Interp *ctx, SExpRef val);
-SExpRef lisp_car(Interp *ctx, SExpRef val);
-SExpRef lisp_cdr(Interp *ctx, SExpRef val);
-SExpRef lisp_eval(Interp *ctx, SExpRef val);
-SExpRef lisp_eval_args(Interp *ctx, SExpRef val);
-SExpRef lisp_add(Interp *ctx, SExpRef lhs, SExpRef rhs);
-SExpRef lisp_sub(Interp *ctx, SExpRef lhs, SExpRef rhs);
-SExpRef lisp_mul(Interp *ctx, SExpRef lhs, SExpRef rhs);
-SExpRef lisp_div(Interp *ctx, SExpRef lhs, SExpRef rhs);
+void lisp_print(Interp *interp, SExpRef obj, FILE *fp);
+SExpRef lisp_lookup(Interp *interp, const char *name);
+SExpRef lisp_lookup_func(Interp *interp, const char *name);
+SExpRef lisp_cons(Interp *interp, SExpRef a, SExpRef b);
+SExpRef lisp_dup(Interp *interp, SExpRef arg);
+bool lisp_nilp(Interp *interp, SExpRef arg);
+SExpRef lisp_car(Interp *interp, SExpRef arg);
+SExpRef lisp_cdr(Interp *interp, SExpRef arg);
+SExpRef lisp_eval(Interp *interp, SExpRef arg);
+SExpRef lisp_eval_args(Interp *interp, SExpRef args);
+SExpRef lisp_add(Interp *interp, SExpRef args);
+SExpRef lisp_sub(Interp *interp, SExpRef args);
+SExpRef lisp_mul(Interp *interp, SExpRef args);
+SExpRef lisp_div(Interp *interp, SExpRef args);
 
 SExpRef new_error(Interp *interp, const char *format, ...);
 SExpRef new_sexp(Interp *ctx);

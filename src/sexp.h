@@ -72,6 +72,8 @@ struct sexp {
         SExpPair pair;
         SExpFunc func;
         SExpEnv env;
+        SExpBinding binding;
+        SExpMacro macro;
     };
 };
 
