@@ -14,6 +14,14 @@ SExpRef builtin_car(Interp *interp, SExpRef args) {
     return CAR(CAR(args));
 }
 
+SExpRef builtin_show(Interp *interp, SExpRef args) {
+    if (lisp_length(interp, args) != 1) {
+        return new_error(interp, "show wrong argument number.\n");
+    }
+    lisp_print(interp, CAR(args), stdout);
+    return NIL;
+}
+
 SExpRef builtin_cdr(Interp *interp, SExpRef args) {
     if (lisp_length(interp, args) != 1) {
         return new_error(interp, "cdr: wrong argument number.\n");
@@ -51,8 +59,7 @@ static SExp raw_sub(SExp a, SExp b) {
         else result -= b.integer;
         return (SExp){ .type = kRealSExp, .real = result };
     } else {
-        int64_t result;
-        return (SExp){ .type = kIntegerSExp, .real = a.integer - b.integer};
+        return (SExp){ .type = kIntegerSExp, .integer= a.integer - b.integer};
     }
 }
 

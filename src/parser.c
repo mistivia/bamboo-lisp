@@ -140,6 +140,10 @@ ParseResult parse_sexp(Parser *parser) {
         return ParseErr(parser, "Unexpected EOF.\n");
     }
     int next = Parser_peek(parser);
+    if (next == ')') {
+        Parser_getchar(parser);
+        return ParseErr(parser, "Invalid S-Expression.\n");
+    }
     if (next == '(') {
         return parse_list(parser);
     } else if (next == ',') {
@@ -335,7 +339,7 @@ static ParseResult parse_token(Parser *parser, const char *token) {
     if (endptr == token + len) return ParseOk(new_integer(parser->ctx, integer));
     double real = strtod(token, &endptr);
     if (endptr == token + len) return ParseOk(new_real(parser->ctx, real));
-    return ParseErr(parser, "Not a number : %s\n.", token);
+    return ParseErr(parser, "Not a number : %s.\n", token);
 }
 
 ParseResult parse_string(Parser *parser) {
@@ -345,7 +349,7 @@ ParseResult parse_string(Parser *parser) {
     Parser_getchar(parser);
     while (Parser_peek(parser) != '"') {
         if (Parser_peek(parser) == EOF) {
-            return ParseErr(parser, "Unexpected EOF.\n.");
+            return ParseErr(parser, "Unexpected EOF.\n");
         }
         if (Parser_peek(parser) == '\0') {
             ret = ParseErr(parser, "Unexpected zero terminator.\n");

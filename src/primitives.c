@@ -1,4 +1,5 @@
 #include "primitives.h"
+#include "interp.h"
 #include "sexp.h"
 
 SExpRef primitive_if(Interp *interp, SExpRef args) {
@@ -189,9 +190,57 @@ error:
     return new_error(interp, "function: syntax error.\n");
 }
 
+static SExpRef build_function_env(Interp *interp, SExpRef func, SExpRef args) {
+    SExpRef param = REF(func)->func.args;
+    SExpRef iparam = param;
+    SExpRef iargs = args;
+    SExpRef env = new_env(interp);
+    while (!NILP(iparam)) {
+        if (VALTYPE(iparam) == kSymbolSExp) {
+            SExpRef binding = new_binding(interp, iparam, iargs);
+            REF(binding)->binding.next = REF(env)->env.bindings;
+            REF(env)->env.bindings = binding;
+            return env;
+        }
+        SExpRef name = CAR(iparam);
+        if (VALTYPE(name) != kSymbolSExp) {
+            return new_error(interp, "function syntax error: parameter must be a symbol.\n");
+        }
+        if (NILP(iargs)) return new_error(interp, "funcall: wrong argument number.\n");
+        SExpRef binding = new_binding(interp, name, CAR(iargs));
+        REF(binding)->binding.next = REF(env)->env.bindings;
+        REF(env)->env.bindings = binding;
+        iargs = CDR(iargs);
+        iparam = CDR(iparam);
+    }
+    if (!NILP(iargs)) return new_error(interp, "funcall: wrong argument number.\n");
+    return env;
+}
+
+SExpRef primitive_funcall(Interp *interp, SExpRef args) {
+    if (lisp_length(interp, args) < 1) goto error;
+    args = lisp_eval_args(interp, args);
+    if (ERRORP(args)) return args;
+    return lisp_apply(interp, CAR(args), CDR(args));
+error:
+    return new_error(interp, "funcall: syntax error.\n");
+}
+
+SExpRef primitive_quote(Interp *interp, SExpRef args) {
+    if (lisp_length(interp, args) != 1) return new_error(interp, "quote: syntax error.\n");
+    return CAR(args);
+}
+
+SExpRef primitive_apply(Interp *interp, SExpRef args) {
+    if (lisp_length(interp, args) != 2) goto error;
+    args = lisp_eval_args(interp, args);
+    if (ERRORP(args)) return args;
+    if (!lisp_check_list(interp, CADR(args))) goto error;
+    return lisp_apply(interp, CAR(args), CADR(args));
+error:
+    return new_error(interp, "apply: syntax error.\n");
+}
+
 // TODO:
-// - funcall
-// - apply
-// - defvar
 // - defmacro
 // - macroexpand-1

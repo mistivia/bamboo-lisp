@@ -52,7 +52,12 @@ void Interp_init(Interp *self) {
     Interp_add_primitive(self, "function", primitive_function);
     Interp_add_primitive(self, "defun", primitive_defun);
     Interp_add_primitive(self, "defvar", primitive_defvar);
+    Interp_add_primitive(self, "funcall", primitive_funcall);
+    Interp_add_primitive(self, "apply", primitive_apply);
+    Interp_add_primitive(self, "quote", primitive_quote);
 
+    Interp_add_userfunc(self, "eval", lisp_eval);
+    Interp_add_userfunc(self, "show", builtin_show);
     Interp_add_userfunc(self, "car", builtin_car);
     Interp_add_userfunc(self, "list", builtin_list);
     Interp_add_userfunc(self, "cdr", builtin_cdr);
@@ -167,6 +172,8 @@ void lisp_to_string_impl(str_builder_t *sb, Int2IntHashTable *visited, Interp *i
         str_builder_append(sb, "\"%s\"", pe->str);
     } else if (pe->type == kFuncSExp) {
         str_builder_append(sb, "<FUNCTION>");
+    } else if (pe->type == kUserFuncSExp) {
+        str_builder_append(sb, "<FUNCTION>");
     } else if (pe->type == kMacroSExp) {
         str_builder_append(sb, "<MACRO>");
     } else if (pe->type == kEnvSExp) {
@@ -192,15 +199,12 @@ void lisp_to_string_impl(str_builder_t *sb, Int2IntHashTable *visited, Interp *i
             }
             if (REF(cur)->type == kNilSExp) {
                 sb->buf[sb->size - 1] = ')';
-                str_builder_append_char(sb, '\0');
             } else if (REF(cur)->type != kPairSExp) {
                 str_builder_append(sb, ". ");
                 lisp_to_string_impl(sb, visited, interp, cur);
                 str_builder_append(sb, ")");
-                str_builder_append_char(sb, '\0');
             } else {
                 str_builder_append(sb, "<%d>)", cur.idx);
-                str_builder_append_char(sb, '\0');
             }
         }
     }
@@ -213,6 +217,7 @@ const char* lisp_to_string(Interp *interp, SExpRef val) {
     Int2IntHashTable_init(&visited);
     init_str_builder(&sb);
     lisp_to_string_impl(&sb, &visited, interp, val);    
+    str_builder_append_char(&sb, '\0');
     Int2IntHashTable_free(&visited);
     return sb.buf;
 }
@@ -229,6 +234,7 @@ void lisp_defun(Interp *interp, const char *name, SExpRef val) {
     binding = REF(interp->top_level)->env.bindings;
     SExpRef newbinding = new_binding(interp, new_symbol(interp, name), NIL);
     REF(newbinding)->binding.func = val;
+    REF(newbinding)->binding.value = unbound;
     REF(newbinding)->binding.next = binding;
     REF(interp->top_level)->env.bindings = newbinding;
 }
@@ -294,10 +300,13 @@ SExpRef lisp_lookup_func(Interp *interp, const char *name) {
     SExpRef binding = REF(interp->top_level)->env.bindings;
     while (REF(binding)->type != kNilSExp) {
         if (strcmp(name, REF(REF(binding)->binding.name)->str) == 0) {
-            return REF(binding)->binding.func;
+            SExpRef ret = REF(binding)->binding.func;
+            if (ret.idx < 0) goto notfound;
+            return ret;
         }
         binding = REF(binding)->binding.next;
     }
+notfound:
     return new_error(interp, "Unbound function: %s.\n", name);
 }
 
@@ -345,6 +354,62 @@ int lisp_length(Interp *interp, SExpRef lst) {
     return cnt;
 }
 
+static SExpRef build_function_env(Interp *interp, SExpRef func, SExpRef args) {
+    SExpRef param = REF(func)->func.args;
+    SExpRef iparam = param;
+    SExpRef iargs = args;
+    SExpRef env = new_env(interp);
+    REF(env)->env.parent = REF(func)->func.env;
+    while (!NILP(iparam)) {
+        if (VALTYPE(iparam) == kSymbolSExp) {
+            SExpRef binding = new_binding(interp, iparam, iargs);
+            REF(binding)->binding.next = REF(env)->env.bindings;
+            REF(env)->env.bindings = binding;
+            return env;
+        }
+        SExpRef name = CAR(iparam);
+        if (VALTYPE(name) != kSymbolSExp) {
+            return new_error(interp, "function syntax error: parameter must be a symbol.\n");
+        }
+        if (NILP(iargs)) return new_error(interp, "funcall: wrong argument number.\n");
+        SExpRef binding = new_binding(interp, name, CAR(iargs));
+        REF(binding)->binding.next = REF(env)->env.bindings;
+        REF(env)->env.bindings = binding;
+        iargs = CDR(iargs);
+        iparam = CDR(iparam);
+    }
+    if (!NILP(iargs)) return new_error(interp, "funcall: wrong argument number.\n");
+    return env;
+}
+
+SExpRef lisp_apply(Interp *interp, SExpRef fn, SExpRef args) {
+    if (VALTYPE(fn) == kFuncSExp) {
+        SExpRef env = build_function_env(interp, fn, args);
+        if (ERRORP(env)) return env;
+        interp->stack = CONS(env, interp->stack);
+        SExpRef ret;
+        SExpRef iter = REF(fn)->func.body;
+        while (!NILP(iter)) {
+            SExpRef exp = CAR(iter);
+            ret = EVAL(exp);
+            if (ERRORP(exp)) goto end;
+            iter = CDR(iter);
+        }
+        end:
+            interp->stack = CDR(interp->stack);
+            return ret;
+    } else if (VALTYPE(fn) == kUserFuncSExp) {
+        PUSH_REG(args);
+        LispUserFunc fnptr = REF(fn)->userfunc;
+        SExpRef ret = (*fnptr)(interp, args);
+        POP_REG();
+        return ret;
+    }
+error:
+    return new_error(interp, "function call: syntax error.\n");
+}
+
+
 
 SExpRef lisp_eval(Interp *interp, SExpRef sexp) {
     SExpRef ret;
@@ -361,6 +426,7 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp) {
             || type == kCharSExp
             || type == kErrSExp
             || type == kFuncSExp
+            || type == kUserFuncSExp
             || type == kRealSExp) {
         ret = sexp;
         goto end;
@@ -388,19 +454,16 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp) {
             }
         }
         SExpRef fn = lisp_lookup_func(interp, symbol);
-        if (REF(fn)->type == kUserFuncSExp) {
-            SExpRef args = lisp_eval_args(interp, CDR(sexp));
-            if (ERRORP(args)) { ret = args; goto end; }
-            PUSH_REG(args);
-            ret = (*REF(fn)->userfunc)(interp, args);
-            POP_REG();
+        if (!ERRORP(fn)) {
+            SExpRef args = CDR(sexp);
+            ret = primitive_funcall(interp, CONS(fn, args));
             goto end;
         }
         // TODO: macro / func
         ret = new_error(interp, "eval: \"%s\" is not a primitive, function, or macro.\n", symbol);
         goto end;
     }
-    ret = NIL;
+    ret = new_error(interp, "eval: unknown syntax.\n");
 end:
     POP_REG();
     Interp_gc(interp, ret);

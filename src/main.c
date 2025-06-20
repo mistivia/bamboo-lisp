@@ -17,6 +17,8 @@ int main() {
         if (parse_result.errmsg != NULL) {
             if (Parser_peek(&parser) == EOF) goto end;
             fprintf(stderr, "Parsing error: %s", parse_result.errmsg);
+            free((void*)parser.string);
+            Parser_set_readline(&parser);
             continue;
         }
 
