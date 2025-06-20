@@ -138,10 +138,42 @@ SExpRef primitive_while(Interp *interp, SExpRef args) {
 error:
     return new_error(interp, "while: syntax error.\n");
 }
+
+SExpRef primitive_lambda(Interp *interp, SExpRef args) {
+    if (lisp_length(interp, args) < 2) goto error;
+    SExpRef env = CAR(interp->stack);
+    SExpRef param = CAR(args);
+    SExpRef body = CDR(args);
+    return new_lambda(interp, param, body, env);
+error:
+    return new_error(interp, "lambda: syntax error.\n");
+}
+
+SExpRef primitive_defun(Interp *interp, SExpRef args) {
+    if (lisp_length(interp, args) < 3) goto error;
+    if (CAR(interp->stack).idx != interp->top_level.idx) {
+        return new_error(interp, "defun: functions can only be defined in top level.\n");
+    }
+    SExpRef name = CAR(args);
+    if (VALTYPE(name) != kSymbolSExp) goto error;
+    SExpRef param = CADR(args);
+    SExpRef body = CDDR(args);
+    SExpRef function = new_lambda(interp, param, body, interp->top_level);
+    lisp_defun(interp, REF(name)->str, function);
+    return name;
+error:
+    return new_error(interp, "defun: syntax error.\n");
+}
+
+SExpRef primitive_function(Interp *interp, SExpRef args) {
+    if (lisp_length(interp, args) != 1) goto error;
+    if (VALTYPE(CAR(args)) != kSymbolSExp) goto error;
+    return lisp_lookup_func(interp, REF(CAR(args))->str);
+error:
+    return new_error(interp, "function: syntax error.\n");
+}
+
 // TODO:
-// - while
-// - lambda
-// - defun
 // - funcall
 // - apply
 // - defvar

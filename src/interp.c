@@ -15,6 +15,8 @@
 void PrimitiveEntry_show(PrimitiveEntry self, FILE *fp) { }
 VECTOR_IMPL(PrimitiveEntry);
 
+SExpRef unbound = {-1};
+
 void Interp_init(Interp *self) {
     self->errmsg_buf = malloc(BUFSIZE);
     SExpVector_init(&self->objs);
@@ -46,6 +48,9 @@ void Interp_init(Interp *self) {
     Interp_add_primitive(self, "setq", primitive_setq);
     Interp_add_primitive(self, "let", primitive_let);
     Interp_add_primitive(self, "while", primitive_while);
+    Interp_add_primitive(self, "lambda", primitive_lambda);
+    Interp_add_primitive(self, "function", primitive_function);
+    Interp_add_primitive(self, "defun", primitive_defun);
 
     Interp_add_userfunc(self, "car", builtin_car);
     Interp_add_userfunc(self, "list", builtin_list);
@@ -62,7 +67,7 @@ void Interp_init(Interp *self) {
 
 void Interp_add_userfunc(Interp *interp, const char *name, LispUserFunc fn) {
     SExpRef userfunc = new_userfunc(interp, fn);
-    lisp_setfun(interp, name, userfunc);
+    lisp_defun(interp, name, userfunc);
 }
 
 void Interp_free(Interp *self) {
@@ -211,7 +216,7 @@ const char* lisp_to_string(Interp *interp, SExpRef val) {
     return sb.buf;
 }
 
-void lisp_setfun(Interp *interp, const char *name, SExpRef val) {
+void lisp_defun(Interp *interp, const char *name, SExpRef val) {
     SExpRef binding = REF(interp->top_level)->env.bindings;
     while (REF(binding)->type != kNilSExp) {
         if (strcmp(name, REF(REF(binding)->binding.name)->str) == 0) {
@@ -249,12 +254,15 @@ SExpRef lisp_lookup(Interp *interp, const char *name) {
         SExpRef binding = REF(env)->env.bindings;
         while (REF(binding)->type != kNilSExp) {
             if (strcmp(name, REF(REF(binding)->binding.name)->str) == 0) {
-                return REF(binding)->binding.value;
+                SExpRef ret = REF(binding)->binding.value;
+                if (ret.idx < 0) goto notfound;
+                return ret;
             }
             binding = REF(binding)->binding.next;
         }
         env = REF(env)->env.parent;
     }
+notfound:
     return new_error(interp, "Unbound variable: %s.\n", name);
 }
 
@@ -398,6 +406,15 @@ SExpRef new_env(Interp *interp) {
     REF(ret)->type = kEnvSExp;
     REF(ret)->env.parent = NIL;
     REF(ret)->env.bindings = NIL;
+    return ret;
+}
+
+SExpRef new_lambda(Interp *interp, SExpRef param, SExpRef body, SExpRef env) {
+    SExpRef ret = new_sexp(interp);
+    REF(ret)->type = kFuncSExp;
+    REF(ret)->func.args = param;
+    REF(ret)->func.body = body;
+    REF(ret)->func.env = env;
     return ret;
 }
 
