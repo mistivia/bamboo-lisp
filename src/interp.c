@@ -7,31 +7,10 @@
 #include <algds/str.h>
 
 #include "sexp.h"
+#include "builtins.h"
+#include "primitives.h"
 
 #define BUFSIZE 1024
-
-#define REF(_x) (Interp_ref(interp, (_x)))
-#define CONS(_x, _y) (lisp_cons(interp, (_x), (_y)))
-#define NILP(_x) (lisp_nilp(interp, (_x)))
-#define EVAL(_x) (lisp_eval(interp, (_x)))
-#define TRUEP(_x) (lisp_truep(interp, (_x)))
-#define ERRORP(_x) (REF((_x))->type == kErrSExp)
-
-#define PUSH_REG(_x) { interp->reg = CONS((_x), interp->reg); }
-#define POP_REG() { interp->reg = CDR(interp->reg);  }
-
-#define CAR(_x) (lisp_car(interp, (_x)))
-#define CDR(_x) (lisp_cdr(interp, (_x)))
-#define CADR(_x) CAR(CDR(_x))
-#define CDDR(_x) CDR(CDR(_x))
-#define CADDR(_x) CAR(CDDR(_x))
-#define CDDDR(_x) CDR(CDDR(_x))
-#define CADDDR(_x) CAR(CDDDR(_x))
-#define CDDDDR(_x) CDR(CDDDR(_x))
-#define CADDDDR(_x) CAR(CDDDDR(_x))
-#define CDDDDDR(_x) CDR(CDDDDR(_x))
-
-#define NIL (interp->nil)
 
 void PrimitiveEntry_show(PrimitiveEntry self, FILE *fp) { }
 VECTOR_IMPL(PrimitiveEntry);
@@ -53,7 +32,7 @@ void Interp_init(Interp *self) {
     SExpVector_push_back(&self->objs, sexp);
     self->top_level = (SExpRef){1};
     sexp.type = kEmptySExp;
-    for (int i = 1; i < 1024; i++) {
+    for (int i = 2; i < 1024; i++) {
         SExpVector_push_back(&self->objs, sexp);
         IntVector_push_back(&self->empty_space, i);
     }
@@ -66,18 +45,24 @@ void Interp_init(Interp *self) {
     Interp_add_primitive(self, "progn", primitive_progn);
     Interp_add_primitive(self, "setq", primitive_setq);
     Interp_add_primitive(self, "let", primitive_let);
+    Interp_add_primitive(self, "while", primitive_while);
 
-    Interp_add_userfunc(self, "car", userfunc_car);
-    Interp_add_userfunc(self, "list", userfunc_list);
-    Interp_add_userfunc(self, "cdr", userfunc_cdr);
-    Interp_add_userfunc(self, "cons", userfunc_cons);
-    Interp_add_userfunc(self, "+", userfunc_add);
-    Interp_add_userfunc(self, "-", userfunc_sub);
+    Interp_add_userfunc(self, "car", builtin_car);
+    Interp_add_userfunc(self, "list", builtin_list);
+    Interp_add_userfunc(self, "cdr", builtin_cdr);
+    Interp_add_userfunc(self, "cons", builtin_cons);
+    Interp_add_userfunc(self, "+", builtin_add);
+    Interp_add_userfunc(self, "-", builtin_sub);
+    Interp_add_userfunc(self, "=", builtin_num_equal);
+    Interp_add_userfunc(self, "<", builtin_lt);
+    Interp_add_userfunc(self, ">", builtin_gt);
+    Interp_add_userfunc(self, ">=", builtin_ge);
+    Interp_add_userfunc(self, "<=", builtin_le);
 }
 
 void Interp_add_userfunc(Interp *interp, const char *name, LispUserFunc fn) {
     SExpRef userfunc = new_userfunc(interp, fn);
-    lisp_defun(interp, name, userfunc);
+    lisp_setfun(interp, name, userfunc);
 }
 
 void Interp_free(Interp *self) {
@@ -226,7 +211,7 @@ const char* lisp_to_string(Interp *interp, SExpRef val) {
     return sb.buf;
 }
 
-void lisp_defun(Interp *interp, const char *name, SExpRef val) {
+void lisp_setfun(Interp *interp, const char *name, SExpRef val) {
     SExpRef binding = REF(interp->top_level)->env.bindings;
     while (REF(binding)->type != kNilSExp) {
         if (strcmp(name, REF(REF(binding)->binding.name)->str) == 0) {
@@ -334,232 +319,6 @@ int lisp_length(Interp *interp, SExpRef lst) {
     return cnt;
 }
 
-SExpRef userfunc_list(Interp *interp, SExpRef args) {
-    return args;
-}
-
-SExpRef userfunc_car(Interp *interp, SExpRef args) {
-    if (lisp_length(interp, args) != 1) {
-        return new_error(interp, "car: wrong argument number.\n");
-    }
-    if (ERRORP(args)) return args;
-    return CAR(CAR(args));
-}
-
-SExpRef userfunc_cdr(Interp *interp, SExpRef args) {
-    if (lisp_length(interp, args) != 1) {
-        return new_error(interp, "cdr: wrong argument number.\n");
-    }
-    return CDR(CAR(args));
-}
-
-SExpRef userfunc_cons(Interp *interp, SExpRef args) {
-    if (lisp_length(interp, args) != 2) {
-        return new_error(interp, "cons: wrong argument number.\n");
-    }
-    return CONS(CAR(args), CADR(args));
-}
-
-static SExp raw_add(SExp a, SExp b) {
-    if (a.type == kRealSExp || b.type == kRealSExp) {
-        double result = 0;
-        if (a.type == kRealSExp) result += a.real;
-        else result += a.integer;
-        if (b.type == kRealSExp) result += b.real;
-        else result += b.integer;
-        return (SExp){ .type = kRealSExp, .real = result };
-    } else {
-        int64_t result;
-        return (SExp){ .type = kIntegerSExp, .integer= a.integer + b.integer};
-    }
-}
-
-static SExp raw_sub(SExp a, SExp b) {
-    if (a.type == kRealSExp || b.type == kRealSExp) {
-        double result = 0;
-        if (a.type == kRealSExp) result += a.real;
-        else result += a.integer;
-        if (b.type == kRealSExp) result -= b.real;
-        else result -= b.integer;
-        return (SExp){ .type = kRealSExp, .real = result };
-    } else {
-        int64_t result;
-        return (SExp){ .type = kIntegerSExp, .real = a.integer - b.integer};
-    }
-}
-
-SExpRef userfunc_add(Interp *interp, SExpRef args) {
-    SExpRef ret;
-    SExp acc = {.type = kIntegerSExp, .integer = 0};
-    SExpRef cur = args;
-    while (!NILP(cur)) {
-        if (REF(CAR(cur))->type != kIntegerSExp && REF(CAR(cur))->type != kRealSExp) {
-            return new_error(interp, "+: wrong argument type.\n");
-        }
-        cur = CDR(cur);
-    }
-    cur = args;
-    while (!NILP(cur)) {
-        acc = raw_add(acc, *REF(CAR(cur)));
-        cur = CDR(cur);
-    }
-    ret = new_sexp(interp);
-    *REF(ret) = acc;
-    return ret;
-}
-
-SExpRef userfunc_sub(Interp *interp, SExpRef args) {
-    SExpRef ret;
-    SExpRef cur = args;
-    while (!NILP(cur)) {
-        if (REF(CAR(cur))->type != kIntegerSExp && REF(CAR(cur))->type != kRealSExp) {
-            return new_error(interp, "-: wrong argument type.\n");
-        }
-        cur = CDR(cur);
-    }
-    int args_len = lisp_length(interp, args);
-    if (args_len == 1) {
-        SExp num = *REF(CAR(args));
-        if (num.type == kIntegerSExp) {
-            return new_integer(interp, -num.integer);
-        }
-        return new_real(interp, -num.real);
-    }
-    if (args_len == 2) {
-        SExp num = raw_sub(*REF(CAR(args)), *REF(CADR(args)));
-        ret = new_sexp(interp);
-        *REF(ret) = num;
-        return ret;
-    }
-    return new_error(interp, "-: wrong argument number.\n");
-}
-
-// TODO:
-// - while
-// - lambda
-// - defun
-// - funcall
-// - apply
-// - defvar
-// - defmacro
-// - macroexpand-1
-
-SExpRef primitive_if(Interp *interp, SExpRef args) {
-    if (lisp_length(interp, args) != 3) goto error;
-    SExpRef cond = CAR(args);
-    SExpRef tb = CADR(args);
-    SExpRef fb = CADDR(args);
-    cond = EVAL(cond);
-    if (ERRORP(cond)) return cond;
-    if (TRUEP(cond)) return EVAL(tb);
-    else return EVAL(fb);
-    return NIL;
-error:
-    return new_error(interp, "if: syntax error.\n");
-}
-
-SExpRef primitive_cond(Interp *interp, SExpRef args) {
-    if (lisp_length(interp, args) < 1) goto error;
-    SExpRef iter = args;
-    while (!NILP(iter)) {
-        SExpRef pair = CAR(iter);
-        if (!lisp_check_list(interp, pair)) goto error;
-        if (lisp_length(interp, pair) != 2) goto error;
-        SExpRef condition = CAR(pair);
-        SExpRef exp = CADR(pair);
-        condition = EVAL(condition);
-        if (ERRORP(condition)) return condition;
-        if (TRUEP(condition)) return EVAL(exp);
-        iter = CDR(iter);
-    }
-    return NIL;
-error:
-    return new_error(interp, "cond: syntax error.\n");
-}
-
-SExpRef primitive_progn(Interp *interp, SExpRef args) {
-    SExpRef iter = args;
-    SExpRef ret;
-    while (!NILP(iter)) {
-        ret = EVAL(CAR(iter));
-        if (ERRORP(ret)) return ret;
-        iter = CDR(iter);
-    }
-    return ret;
-}
-
-SExpRef primitive_setq(Interp *interp, SExpRef args) {
-    if (lisp_length(interp, args) != 2) goto error;
-    SExpRef name = CAR(args);
-    SExpRef exp = CADR(args);
-    if (REF(name)->type != kSymbolSExp) goto error;
-    SExpRef value = EVAL(exp);
-    if (ERRORP(value)) return value;
-    lisp_setq(interp, REF(name)->str, value);
-    return NIL;
-error:
-    return new_error(interp, "setq: syntax error.\n");
-}
-
-static const char *binding_name(Interp *interp, SExpRef binding) {
-    SExpRef namesym = REF(binding)->binding.name;
-    return REF(namesym)->str;
-}
-
-static bool is_binding_repeat(Interp *interp, SExpRef sym, SExpRef env) {
-    SExpRef binding = REF(env)->env.bindings;
-    while (!NILP(binding)) {
-        if (strcmp(REF(sym)->str, binding_name(interp, binding)) == 0) return true;
-        binding = REF(binding)->binding.next;
-    }
-    return false;
-}
-
-SExpRef primitive_let(Interp *interp, SExpRef args) {
-    if (lisp_length(interp, args) < 1) goto error;
-    SExpRef bindings = CAR(args);
-    SExpRef env = new_env(interp);
-    REF(env)->env.parent = CAR(interp->stack);
-
-    SExpRef iter = bindings;
-    while (!NILP(iter)) {
-        SExpRef x = CAR(iter);
-        if (!lisp_check_list(interp, x)) goto error;
-        if (lisp_length(interp, x) != 2) goto error;
-        if (REF(CAR(x))->type != kSymbolSExp) goto error;
-        if (is_binding_repeat(interp, CAR(x), env)) goto error;
-        SExpRef binding = new_binding(interp, CAR(x), NIL);
-        REF(binding)->binding.next = REF(env)->env.bindings;
-        REF(env)->env.bindings = binding;
-        iter = CDR(iter);
-    }
-    interp->stack = CONS(env, interp->stack);
-
-    iter = bindings;
-    while (!NILP(iter)) {
-        SExpRef x = CAR(iter);
-        SExpRef val = EVAL(CADR(x));
-        if (REF(val)->type == kErrSExp) goto end;
-        lisp_setq(interp, REF(CAR(x))->str, val);
-        iter = CDR(iter);
-    }
-
-    SExpRef body = CDR(args);
-    SExpRef ret = NIL;
-    iter = body;
-    while (!NILP(iter)) {
-        SExpRef exp = CAR(iter);
-        ret = EVAL(exp);
-        if (REF(ret)->type == kErrSExp) goto end;
-        iter = CDR(iter);
-    }
-end:
-    interp->stack = CDR(interp->stack);
-    return ret;
-
-error:
-    return new_error(interp, "let: syntax error. \n");
-}
 
 SExpRef lisp_eval(Interp *interp, SExpRef sexp) {
     SExpRef ret;

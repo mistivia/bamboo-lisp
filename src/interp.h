@@ -8,7 +8,6 @@
 #include "algds/vec.h"
 #include "sexp.h"
 
-
 struct interp;
 typedef struct interp Interp;
 
@@ -33,7 +32,6 @@ struct interp {
     char *errmsg_buf;
 };
 
-
 void Interp_init(Interp *self);
 void Interp_free(Interp *self);
 SExp* Interp_ref(Interp *self, SExpRef ref);
@@ -41,26 +39,38 @@ void Interp_gc(Interp *self, SExpRef tmp_root);
 void Interp_add_primitive(Interp *self, const char *name, LispPrimitive fn);
 void Interp_add_userfunc(Interp *self, const char *name, LispUserFunc fn);
 
-SExpRef primitive_if(Interp *interp, SExpRef sexp);
-SExpRef primitive_cond(Interp *interp, SExpRef sexp);
-SExpRef primitive_progn(Interp *interp, SExpRef sexp);
-SExpRef primitive_setq(Interp *interp, SExpRef sexp);
-SExpRef primitive_let(Interp *interp, SExpRef sexp);
+#define REF(_x) (Interp_ref(interp, (_x)))
+#define CONS(_x, _y) (lisp_cons(interp, (_x), (_y)))
+#define NILP(_x) (lisp_nilp(interp, (_x)))
+#define EVAL(_x) (lisp_eval(interp, (_x)))
+#define TRUEP(_x) (lisp_truep(interp, (_x)))
+#define ERRORP(_x) (REF((_x))->type == kErrSExp)
+#define VALTYPE(_x) (REF((_x))->type)
+#define NIL (interp->nil)
+#define CAR(_x) (lisp_car(interp, (_x)))
+#define CDR(_x) (lisp_cdr(interp, (_x)))
+#define CADR(_x) CAR(CDR(_x))
+#define CDDR(_x) CDR(CDR(_x))
+#define CADDR(_x) CAR(CDDR(_x))
+#define CDDDR(_x) CDR(CDDR(_x))
+#define CADDDR(_x) CAR(CDDDR(_x))
+#define CDDDDR(_x) CDR(CDDDR(_x))
+#define CADDDDR(_x) CAR(CDDDDR(_x))
+#define CDDDDDR(_x) CDR(CDDDDR(_x))
+#define PUSH_REG(_x) { interp->reg = CONS((_x), interp->reg); }
+#define POP_REG() { interp->reg = CDR(interp->reg);  }
 
-SExpRef userfunc_list(Interp *interp, SExpRef sexp);
-SExpRef userfunc_car(Interp *interp, SExpRef sexp);
-SExpRef userfunc_cdr(Interp *interp, SExpRef sexp);
-SExpRef userfunc_cons(Interp *interp, SExpRef sexp);
-SExpRef userfunc_add(Interp *interp, SExpRef sexp);
-SExpRef userfunc_sub(Interp *interp, SExpRef sexp);
-
-void lisp_defun(Interp *interp, const char *name, SExpRef val);
+void lisp_setfun(Interp *interp, const char *name, SExpRef val);
 void lisp_print(Interp *interp, SExpRef obj, FILE *fp);
 SExpRef lisp_lookup(Interp *interp, const char *name);
 SExpRef lisp_lookup_func(Interp *interp, const char *name);
 SExpRef lisp_cons(Interp *interp, SExpRef a, SExpRef b);
 SExpRef lisp_dup(Interp *interp, SExpRef arg);
 bool lisp_nilp(Interp *interp, SExpRef arg);
+bool lisp_truep(Interp *interp, SExpRef a);
+bool lisp_check_list(Interp *interp, SExpRef lst);
+SExpRef lisp_setq(Interp *interp, const char *name, SExpRef val);
+int lisp_length(Interp *interp, SExpRef lst);
 SExpRef lisp_car(Interp *interp, SExpRef arg);
 SExpRef lisp_cdr(Interp *interp, SExpRef arg);
 SExpRef lisp_eval(Interp *interp, SExpRef arg);

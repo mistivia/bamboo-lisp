@@ -1,0 +1,13 @@
+#ifndef BAMBOO_LISP_PRIMITIVIE_H_
+#define BAMBOO_LISP_PRIMITIVIE_H_
+
+#include "interp.h"
+
+SExpRef primitive_if(Interp *interp, SExpRef sexp);
+SExpRef primitive_cond(Interp *interp, SExpRef sexp);
+SExpRef primitive_progn(Interp *interp, SExpRef sexp);
+SExpRef primitive_setq(Interp *interp, SExpRef sexp);
+SExpRef primitive_let(Interp *interp, SExpRef sexp);
+SExpRef primitive_while(Interp *interp, SExpRef sexp);
+
+#endif
