@@ -60,6 +60,7 @@ void Interp_add_userfunc(Interp *self, const char *name, LispUserFunc fn);
 #define PUSH_REG(_x) { interp->reg = CONS((_x), interp->reg); }
 #define POP_REG() { interp->reg = CDR(interp->reg);  }
 
+SExpRef lisp_macroexpand1(Interp *interp, SExpRef macro, SExpRef args);
 SExpRef lisp_reverse(Interp *interp, SExpRef lst);
 void lisp_defun(Interp *interp, const char *name, SExpRef val);
 void lisp_defvar(Interp *interp, const char *name, SExpRef val);
@@ -95,6 +96,7 @@ SExpRef new_env(Interp *ctx);
 SExpRef new_binding(Interp *ctx, SExpRef name, SExpRef val);
 SExpRef new_userfunc(Interp *interp, LispUserFunc val);
 SExpRef new_lambda(Interp *interp, SExpRef param, SExpRef body, SExpRef env);
+SExpRef new_macro(Interp *interp, SExpRef param, SExpRef body);
 SExpRef new_list1(Interp *ctx, SExpRef e1);
 SExpRef new_list2(Interp *ctx, SExpRef e1, SExpRef e2);
 SExpRef new_list3(Interp *ctx, SExpRef e1, SExpRef e2, SExpRef e3);

@@ -52,10 +52,12 @@ void Interp_init(Interp *self) {
     Interp_add_primitive(self, "function", primitive_function);
     Interp_add_primitive(self, "defun", primitive_defun);
     Interp_add_primitive(self, "defvar", primitive_defvar);
+    Interp_add_primitive(self, "defmacro", primitive_defmacro);
     Interp_add_primitive(self, "funcall", primitive_funcall);
     Interp_add_primitive(self, "apply", primitive_apply);
     Interp_add_primitive(self, "quote", primitive_quote);
     Interp_add_primitive(self, "quasiquote", primitive_quasi);
+    Interp_add_primitive(self, "macroexpand-1", primitive_macroexpand1);
 
     Interp_add_userfunc(self, "eval", lisp_eval);
     Interp_add_userfunc(self, "show", builtin_show);
@@ -223,6 +225,16 @@ const char* lisp_to_string(Interp *interp, SExpRef val) {
     return sb.buf;
 }
 
+SExpRef lisp_macroexpand1(Interp *interp, SExpRef macro, SExpRef args) {
+    SExpRef fn = new_lambda(interp, REF(macro)->macro.args, REF(macro)->macro.body, interp->top_level);
+    PUSH_REG(fn);
+    SExpRef ret = lisp_apply(interp, fn, args);
+    POP_REG();
+    return ret;
+error:
+    return new_error(interp, "macroexpand: syntax error.\n");
+}
+
 void lisp_defun(Interp *interp, const char *name, SExpRef val) {
     SExpRef binding = REF(interp->top_level)->env.bindings;
     while (REF(binding)->type != kNilSExp) {
@@ -264,7 +276,7 @@ SExpRef lisp_setq(Interp *interp, const char *name, SExpRef val) {
         while (REF(binding)->type != kNilSExp) {
             if (strcmp(name, REF(REF(binding)->binding.name)->str) == 0) {
                 REF(binding)->binding.value = val;
-                return NIL;
+                return val;
             }
             binding = REF(binding)->binding.next;
         }
@@ -455,14 +467,22 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp) {
             }
         }
         SExpRef fn = lisp_lookup_func(interp, symbol);
-        if (!ERRORP(fn)) {
+        if (ERRORP(fn)) {
+            ret = new_error(interp, "eval: \"%s\" is not a primitive, function, or macro.\n", symbol);
+            goto end;
+        }
+        if (VALTYPE(fn) == kFuncSExp || VALTYPE(fn) == kUserFuncSExp) {
             SExpRef args = CDR(sexp);
             ret = primitive_funcall(interp, CONS(fn, args));
             goto end;
+        } else if (VALTYPE(fn) == kMacroSExp) {
+            SExpRef args = CDR(sexp);
+            SExpRef newast = lisp_macroexpand1(interp, fn, args);
+            PUSH_REG(newast);
+            ret = EVAL(newast);
+            POP_REG();
+            goto end;
         }
-        // TODO: macro / func
-        ret = new_error(interp, "eval: \"%s\" is not a primitive, function, or macro.\n", symbol);
-        goto end;
     }
     ret = new_error(interp, "eval: unknown syntax.\n");
 end:
@@ -497,6 +517,14 @@ SExpRef new_lambda(Interp *interp, SExpRef param, SExpRef body, SExpRef env) {
     REF(ret)->func.args = param;
     REF(ret)->func.body = body;
     REF(ret)->func.env = env;
+    return ret;
+}
+
+SExpRef new_macro(Interp *interp, SExpRef param, SExpRef body) {
+    SExpRef ret = new_sexp(interp);
+    REF(ret)->type = kMacroSExp;
+    REF(ret)->macro.args = param;
+    REF(ret)->macro.body = body;
     return ret;
 }
 

@@ -165,6 +165,21 @@ SExpRef primitive_defun(Interp *interp, SExpRef args) {
 error:
     return new_error(interp, "defun: syntax error.\n");
 }
+SExpRef primitive_defmacro(Interp *interp, SExpRef args) {
+    if (lisp_length(interp, args) < 3) goto error;
+    if (CAR(interp->stack).idx != interp->top_level.idx) {
+        return new_error(interp, "defmacro: macros can only be defined in top level.\n");
+    }
+    SExpRef name = CAR(args);
+    if (VALTYPE(name) != kSymbolSExp) goto error;
+    SExpRef param = CADR(args);
+    SExpRef body = CDDR(args);
+    SExpRef macro = new_macro(interp, param, body);
+    lisp_defun(interp, REF(name)->str, macro);
+    return name;
+error:
+    return new_error(interp, "defmacro: syntax error.\n");
+}
 
 SExpRef primitive_defvar(Interp *interp, SExpRef args) {
     if (lisp_length(interp, args) != 2) goto error;
@@ -231,6 +246,17 @@ SExpRef primitive_quote(Interp *interp, SExpRef args) {
     return CAR(args);
 }
 
+SExpRef primitive_macroexpand1(Interp *interp, SExpRef args) {
+    if (lisp_length(interp, args) != 1) goto error;
+    args = CAR(args);
+    if (VALTYPE(CAR(args)) != kSymbolSExp) goto error;
+    SExpRef macro = lisp_lookup_func(interp, REF(CAR(args))->str);
+    if (VALTYPE(macro) != kMacroSExp) goto error;
+    return lisp_macroexpand1(interp, macro, CDR(args));
+error:
+    return new_error(interp, "macroexpand-1: syntax error.\n");
+}
+
 SExpRef primitive_apply(Interp *interp, SExpRef args) {
     if (lisp_length(interp, args) != 2) goto error;
     args = lisp_eval_args(interp, args);
@@ -292,7 +318,6 @@ static SExpRef quasi_on_list(Interp *interp, SExpRef lst) {
 
     return lisp_reverse(interp, newlst);
 }
-
 
 SExpRef primitive_quasi(Interp *interp, SExpRef args) {
     if (lisp_length(interp, args) != 1) return new_error(interp, "quasiquote: syntax error.\n");
