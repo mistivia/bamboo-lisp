@@ -351,6 +351,3 @@ SExpRef primitive_or(Interp *interp, SExpRef args) {
     return ret;
 }
 
-// TODO:
-// - defmacro
-// - macroexpand-1
