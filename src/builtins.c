@@ -382,6 +382,13 @@ SExpRef builtin_ge(Interp *interp, SExpRef args) {
     }
 }
 
+SExpRef builtin_gcstat(Interp *interp, SExpRef args) {
+    int heapsize = SExpVector_len(&interp->objs);
+    int freesize = IntVector_len(&interp->empty_space);
+    fprintf(stderr, "heapsize: %d, free: %d\n", heapsize, freesize);
+    return NIL;
+}
+
 SExpRef builtin_le(Interp *interp, SExpRef args) {
     int args_len = lisp_length(interp, args);
     if (args_len != 2) return new_error(interp, "<=: wrong argument number.\n");

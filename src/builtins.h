@@ -23,5 +23,6 @@ SExpRef builtin_lt(Interp *interp, SExpRef sexp);
 SExpRef builtin_ge(Interp *interp, SExpRef sexp);
 SExpRef builtin_le(Interp *interp, SExpRef sexp);
 SExpRef builtin_show(Interp *interp, SExpRef sexp);
+SExpRef builtin_gcstat(Interp *interp, SExpRef sexp);
 
 #endif

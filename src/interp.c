@@ -25,6 +25,7 @@ void Interp_init(Interp *self) {
     String2IntHashTable_init(&self->symbols);
     int i = 0;
     SExp sexp;
+    sexp.marked = false;
     sexp.type = kNilSExp;
     SExpVector_push_back(&self->objs, sexp);
     self->nil = (SExpRef){i}; i++;
@@ -92,6 +93,7 @@ void Interp_init(Interp *self) {
     Interp_add_userfunc(self, ">=", builtin_ge);
     Interp_add_userfunc(self, "<=", builtin_le);
     Interp_add_userfunc(self, "not", builtin_not);
+    Interp_add_userfunc(self, "gcstat", builtin_gcstat);
 }
 
 void Interp_add_userfunc(Interp *interp, const char *name, LispUserFunc fn) {
@@ -132,7 +134,72 @@ void Interp_add_primitive(Interp *self, const char *name, LispPrimitive fn) {
 }
 
 void Interp_gc(Interp *interp, SExpRef tmproot) {
-    // TODO
+    if (!IntVector_empty(&interp->empty_space)) {
+        return;
+    }
+    SExpRefVector gcstack;
+    SExpRefVector_init(&gcstack);
+    // add root
+    SExpRefVector_push_back(&gcstack, tmproot);
+    SExpRefVector_push_back(&gcstack, interp->nil);
+    SExpRefVector_push_back(&gcstack, interp->t);
+    SExpRefVector_push_back(&gcstack, interp->f);
+    SExpRefVector_push_back(&gcstack, interp->stack);
+    SExpRefVector_push_back(&gcstack, interp->top_level);
+    SExpRefVector_push_back(&gcstack, interp->reg);
+    // mark
+    while (!SExpRefVector_empty(&gcstack)) {
+        SExpRef ref = *SExpRefVector_last(&gcstack);
+        SExpRefVector_pop(&gcstack);
+        if (ref.idx < 0) continue;
+        SExp *obj = REF(ref);
+        if (obj->marked) continue;
+        obj->marked = true;
+        if (obj->type == kPairSExp) {
+            SExpRefVector_push_back(&gcstack, obj->pair.car);
+            SExpRefVector_push_back(&gcstack, obj->pair.cdr);
+        } else if (obj->type == kFuncSExp) {
+            SExpRefVector_push_back(&gcstack, obj->func.args);
+            SExpRefVector_push_back(&gcstack, obj->func.body);
+            SExpRefVector_push_back(&gcstack, obj->func.env);
+        } else if (obj->type == kEnvSExp) {
+            SExpRefVector_push_back(&gcstack, obj->env.bindings);
+            SExpRefVector_push_back(&gcstack, obj->env.parent);
+        } else if (obj->type == kBindingSExp) {
+            SExpRefVector_push_back(&gcstack, obj->binding.name);
+            SExpRefVector_push_back(&gcstack, obj->binding.value);
+            SExpRefVector_push_back(&gcstack, obj->binding.func);
+            SExpRefVector_push_back(&gcstack, obj->binding.next);
+        } else if (obj->type == kMacroSExp) {
+            SExpRefVector_push_back(&gcstack, obj->macro.args);
+            SExpRefVector_push_back(&gcstack, obj->macro.body);
+        }
+    }
+    SExpRefVector_free(&gcstack);
+    // sweep
+    for (int i = 0; i < SExpVector_len(&interp->objs); i++) {
+        SExp *obj = SExpVector_ref(&interp->objs, i);
+        if (obj->marked) {
+            obj->marked = false;
+            continue;
+        }
+        if (obj->type == kSymbolSExp) continue;
+        if (obj->type == kStringSExp) free((void*)obj->str);
+        obj->type = kEmptySExp;
+        IntVector_push_back(&interp->empty_space, i);
+    }
+    // enlarge heap
+    int heapsize = SExpVector_len(&interp->objs);
+    int usedsize = heapsize - IntVector_len(&interp->empty_space);
+    if (heapsize < usedsize * 2) {
+        SExp sexp;
+        sexp.marked = false;
+        sexp.type = kEmptySExp;
+        while (SExpVector_len(&interp->objs) < usedsize * 2) {
+            SExpVector_push_back(&interp->objs, sexp);
+            IntVector_push_back(&interp->empty_space, SExpVector_len(&interp->objs) - 1);
+        }
+    }        
 }
 
 bool lisp_truep(Interp *interp, SExpRef a) {
@@ -360,10 +427,12 @@ SExpRef lisp_reverse(Interp *interp, SExpRef lst) {
 SExpRef lisp_eval_args(Interp *interp, SExpRef args) {
     SExpRef ret = interp->nil;
     SExpRef cur = args;
+    SExpRef evalres;
+
     while (!NILP(cur)) {
         // save ret in register
         PUSH_REG(ret);
-        SExpRef evalres = EVAL(CAR(cur));
+        evalres = EVAL(CAR(cur));
         POP_REG();
         if (ERRORP(evalres)) {
             ret = evalres;
@@ -416,14 +485,15 @@ static SExpRef build_function_env(Interp *interp, SExpRef func, SExpRef args) {
 }
 
 SExpRef lisp_apply(Interp *interp, SExpRef fn, SExpRef args) {
+    SExpRef exp, env, ret, iter;
+
     if (VALTYPE(fn) == kFuncSExp) {
-        SExpRef env = build_function_env(interp, fn, args);
+        env = build_function_env(interp, fn, args);
         if (ERRORP(env)) return env;
         interp->stack = CONS(env, interp->stack);
-        SExpRef ret;
-        SExpRef iter = REF(fn)->func.body;
+        iter = REF(fn)->func.body;
         while (!NILP(iter)) {
-            SExpRef exp = CAR(iter);
+            exp = CAR(iter);
             ret = EVAL(exp);
             if (ERRORP(exp)) goto end;
             iter = CDR(iter);
@@ -432,10 +502,8 @@ SExpRef lisp_apply(Interp *interp, SExpRef fn, SExpRef args) {
             interp->stack = CDR(interp->stack);
             return ret;
     } else if (VALTYPE(fn) == kUserFuncSExp) {
-        PUSH_REG(args);
         LispUserFunc fnptr = REF(fn)->userfunc;
-        SExpRef ret = (*fnptr)(interp, args);
-        POP_REG();
+        ret = (*fnptr)(interp, args);
         return ret;
     }
 error:
@@ -493,7 +561,10 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp) {
         }
         if (VALTYPE(fn) == kFuncSExp || VALTYPE(fn) == kUserFuncSExp) {
             SExpRef args = CDR(sexp);
-            ret = primitive_funcall(interp, CONS(fn, args));
+            SExpRef funcallargs = CONS(fn, args);
+            PUSH_REG(funcallargs);
+            ret = primitive_funcall(interp, funcallargs);
+            POP_REG();
             goto end;
         } else if (VALTYPE(fn) == kMacroSExp) {
             SExpRef args = CDR(sexp);
@@ -515,6 +586,7 @@ SExpRef new_sexp(Interp *interp) {
     if (IntVector_len(&interp->empty_space) == 0) {
         SExp sexp;
         sexp.type = kEmptySExp;
+        sexp.marked = false;
         SExpVector_push_back(&interp->objs, sexp);
         return (SExpRef){ SExpVector_len(&interp->objs) - 1 };
     }
