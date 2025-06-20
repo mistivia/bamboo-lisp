@@ -7,7 +7,7 @@ SExpRef builtin_list(Interp *interp, SExpRef args) {
 }
 
 SExpRef builtin_car(Interp *interp, SExpRef args) {
-    if (lisp_length(interp, args) != 1) {
+    if (LENGTH(args) != 1) {
         return new_error(interp, "car: wrong argument number.\n");
     }
     if (ERRORP(args)) return args;
@@ -15,7 +15,7 @@ SExpRef builtin_car(Interp *interp, SExpRef args) {
 }
 
 SExpRef builtin_show(Interp *interp, SExpRef args) {
-    if (lisp_length(interp, args) != 1) {
+    if (LENGTH(args) != 1) {
         return new_error(interp, "show wrong argument number.\n");
     }
     lisp_print(interp, CAR(args), stdout);
@@ -23,14 +23,14 @@ SExpRef builtin_show(Interp *interp, SExpRef args) {
 }
 
 SExpRef builtin_cdr(Interp *interp, SExpRef args) {
-    if (lisp_length(interp, args) != 1) {
+    if (LENGTH(args) != 1) {
         return new_error(interp, "cdr: wrong argument number.\n");
     }
     return CDR(CAR(args));
 }
 
 SExpRef builtin_cons(Interp *interp, SExpRef args) {
-    if (lisp_length(interp, args) != 2) {
+    if (LENGTH(args) != 2) {
         return new_error(interp, "cons: wrong argument number.\n");
     }
     return CONS(CAR(args), CADR(args));
@@ -149,7 +149,7 @@ SExpRef builtin_sub(Interp *interp, SExpRef args) {
         }
         cur = CDR(cur);
     }
-    int args_len = lisp_length(interp, args);
+    int args_len = LENGTH(args);
     if (args_len == 1) {
         SExp num = *REF(CAR(args));
         if (num.type == kIntegerSExp) {
@@ -175,7 +175,7 @@ SExpRef builtin_div(Interp *interp, SExpRef args) {
         }
         cur = CDR(cur);
     }
-    int args_len = lisp_length(interp, args);
+    int args_len = LENGTH(args);
     if (args_len == 1) {
         SExp num = *REF(CAR(args));
         if (num.type == kIntegerSExp) {
@@ -201,7 +201,7 @@ SExpRef builtin_idiv(Interp *interp, SExpRef args) {
         }
         cur = CDR(cur);
     }
-    int args_len = lisp_length(interp, args);
+    int args_len = LENGTH(args);
     if (args_len == 2) {
         SExp num = raw_idiv(*REF(CAR(args)), *REF(CADR(args)));
         ret = new_sexp(interp);
@@ -220,7 +220,7 @@ SExpRef builtin_mod(Interp *interp, SExpRef args) {
         }
         cur = CDR(cur);
     }
-    int args_len = lisp_length(interp, args);
+    int args_len = LENGTH(args);
     if (args_len == 2) {
         SExp num = raw_mod(*REF(CAR(args)), *REF(CADR(args)));
         ret = new_sexp(interp);
@@ -231,14 +231,14 @@ SExpRef builtin_mod(Interp *interp, SExpRef args) {
 }
 
 SExpRef builtin_not(Interp *interp, SExpRef args) {
-    int args_len = lisp_length(interp, args);
+    int args_len = LENGTH(args);
     if (args_len != 1) return new_error(interp, "not: wrong argument number.\n");
     if (TRUEP(CAR(args))) return interp->f;
     return interp->t;
 }
 
 SExpRef builtin_num_equal(Interp *interp, SExpRef args) {
-    int args_len = lisp_length(interp, args);
+    int args_len = LENGTH(args);
     if (args_len != 2) return new_error(interp, "=: wrong argument number.\n");
     SExpRef lhs = CAR(args);
     SExpRef rhs = CADR(args);
@@ -267,7 +267,7 @@ SExpRef builtin_num_equal(Interp *interp, SExpRef args) {
 }
 
 SExpRef builtin_num_neq(Interp *interp, SExpRef args) {
-    int args_len = lisp_length(interp, args);
+    int args_len = LENGTH(args);
     if (args_len != 2) return new_error(interp, "/=: wrong argument number.\n");
     SExpRef lhs = CAR(args);
     SExpRef rhs = CADR(args);
@@ -296,7 +296,7 @@ SExpRef builtin_num_neq(Interp *interp, SExpRef args) {
 }
 
 SExpRef builtin_gt(Interp *interp, SExpRef args) {
-    int args_len = lisp_length(interp, args);
+    int args_len = LENGTH(args);
     if (args_len != 2) return new_error(interp, ">: wrong argument number.\n");
     SExpRef lhs = CAR(args);
     SExpRef rhs = CADR(args);
@@ -325,7 +325,7 @@ SExpRef builtin_gt(Interp *interp, SExpRef args) {
 }
 
 SExpRef builtin_lt(Interp *interp, SExpRef args) {
-    int args_len = lisp_length(interp, args);
+    int args_len = LENGTH(args);
     if (args_len != 2) return new_error(interp, "<: wrong argument number.\n");
     SExpRef lhs = CAR(args);
     SExpRef rhs = CADR(args);
@@ -354,7 +354,7 @@ SExpRef builtin_lt(Interp *interp, SExpRef args) {
 }
 
 SExpRef builtin_ge(Interp *interp, SExpRef args) {
-    int args_len = lisp_length(interp, args);
+    int args_len = LENGTH(args);
     if (args_len != 2) return new_error(interp, ">=: wrong argument number.\n");
     SExpRef lhs = CAR(args);
     SExpRef rhs = CADR(args);
@@ -390,7 +390,7 @@ SExpRef builtin_gcstat(Interp *interp, SExpRef args) {
 }
 
 SExpRef builtin_le(Interp *interp, SExpRef args) {
-    int args_len = lisp_length(interp, args);
+    int args_len = LENGTH(args);
     if (args_len != 2) return new_error(interp, "<=: wrong argument number.\n");
     SExpRef lhs = CAR(args);
     SExpRef rhs = CADR(args);

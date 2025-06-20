@@ -44,6 +44,7 @@ void Interp_add_userfunc(Interp *self, const char *name, LispUserFunc fn);
 #define REF(_x) (Interp_ref(interp, (_x)))
 #define CONS(_x, _y) (lisp_cons(interp, (_x), (_y)))
 #define NILP(_x) (lisp_nilp(interp, (_x)))
+#define LENGTH(_x) (lisp_length(interp, (_x)))
 #define EVAL(_x) (lisp_eval(interp, (_x)))
 #define TRUEP(_x) (lisp_truep(interp, (_x)))
 #define ERRORP(_x) (REF((_x))->type == kErrSExp)

@@ -231,8 +231,8 @@ ParseResult parse_list(Parser *parser) {
         ret = parse_sexp(parser);
         if (ParseResult_is_err(ret)) goto end;
         SExpRefVector_push_back(&elems, ret.val);
-        ret = expect_space_or_end(parser);
-        if (ParseResult_is_err(ret)) goto end;
+        // ret = expect_space_or_end(parser);
+        // if (ParseResult_is_err(ret)) goto end;
         skip_spaces(parser);
     }
     // dot
@@ -256,6 +256,9 @@ static char *read_token(Parser *parser) {
     while (!isspace(Parser_peek(parser))
             && Parser_peek(parser) != EOF
             && Parser_peek(parser) != ')'
+            && Parser_peek(parser) != '('
+            && Parser_peek(parser) != '"'
+            && (i == 0 || Parser_peek(parser) != '#')
             && i < BUFSIZE - 1) {
         parser->token_buf[i] = Parser_getchar(parser);
         i++;
@@ -281,6 +284,7 @@ static bool is_symbol_init(char c) {
     if (c == '^') return true;
     if (c == '_') return true;
     if (c == '~') return true;
+    if (c < 0) return true;
     return false;
 }
 

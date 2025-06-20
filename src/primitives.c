@@ -5,7 +5,7 @@
 SExpRef primitive_if(Interp *interp, SExpRef args) {
     SExpRef cond, tb, fb;
 
-    if (lisp_length(interp, args) != 3) goto error;
+    if (LENGTH(args) != 3) goto error;
     cond = CAR(args);
     tb = CADR(args);
     fb = CADDR(args);
@@ -21,12 +21,12 @@ error:
 SExpRef primitive_cond(Interp *interp, SExpRef args) {
     SExpRef pair, condition, exp, iter;
 
-    if (lisp_length(interp, args) < 1) goto error;
+    if (LENGTH(args) < 1) goto error;
     iter = args;
     while (!NILP(iter)) {
         pair = CAR(iter);
         if (!lisp_check_list(interp, pair)) goto error;
-        if (lisp_length(interp, pair) != 2) goto error;
+        if (LENGTH(pair) != 2) goto error;
         condition = CAR(pair);
         exp = CADR(pair);
         condition = EVAL(condition);
@@ -54,7 +54,7 @@ SExpRef primitive_progn(Interp *interp, SExpRef args) {
 SExpRef primitive_setq(Interp *interp, SExpRef args) {
     SExpRef name, exp, value;
 
-    if (lisp_length(interp, args) != 2) goto error;
+    if (LENGTH(args) != 2) goto error;
     name = CAR(args);
     exp = CADR(args);
     if (REF(name)->type != kSymbolSExp) goto error;
@@ -84,7 +84,7 @@ SExpRef primitive_let(Interp *interp, SExpRef args) {
     SExpRef binding, iter, bindings, env, x,
             val, body, ret, exp;
 
-    if (lisp_length(interp, args) < 1) goto error;
+    if (LENGTH(args) < 1) goto error;
     bindings = CAR(args);
     env = new_env(interp);
     REF(env)->env.parent = CAR(interp->stack);
@@ -93,7 +93,7 @@ SExpRef primitive_let(Interp *interp, SExpRef args) {
     while (!NILP(iter)) {
         x = CAR(iter);
         if (!lisp_check_list(interp, x)) goto error;
-        if (lisp_length(interp, x) != 2) goto error;
+        if (LENGTH(x) != 2) goto error;
         if (REF(CAR(x))->type != kSymbolSExp) goto error;
         if (is_binding_repeat(interp, CAR(x), env)) goto error;
         binding = new_binding(interp, CAR(x), NIL);
@@ -133,7 +133,7 @@ error:
 SExpRef primitive_while(Interp *interp, SExpRef args) {
     SExpRef ret, pred, body, cond, iter, x;
 
-    if (lisp_length(interp, args) < 2) goto error;
+    if (LENGTH(args) < 2) goto error;
     ret = NIL;
     pred = CAR(args);
     body = CDR(args);
@@ -156,7 +156,7 @@ error:
 SExpRef primitive_lambda(Interp *interp, SExpRef args) {
     SExpRef env, param, body;
 
-    if (lisp_length(interp, args) < 2) goto error;
+    if (LENGTH(args) < 2) goto error;
     env = CAR(interp->stack);
     param = CAR(args);
     body = CDR(args);
@@ -168,7 +168,7 @@ error:
 SExpRef primitive_defun(Interp *interp, SExpRef args) {
     SExpRef name, param, body, function;
 
-    if (lisp_length(interp, args) < 3) goto error;
+    if (LENGTH(args) < 3) goto error;
     if (CAR(interp->stack).idx != interp->top_level.idx) {
         return new_error(interp, "defun: functions can only be defined in top level.\n");
     }
@@ -185,7 +185,7 @@ error:
 SExpRef primitive_defmacro(Interp *interp, SExpRef args) {
     SExpRef param, name, body, macro;
 
-    if (lisp_length(interp, args) < 3) goto error;
+    if (LENGTH(args) < 3) goto error;
     if (CAR(interp->stack).idx != interp->top_level.idx) {
         return new_error(interp, "defmacro: macros can only be defined in top level.\n");
     }
@@ -203,7 +203,7 @@ error:
 SExpRef primitive_defvar(Interp *interp, SExpRef args) {
     SExpRef name, exp, val;
 
-    if (lisp_length(interp, args) != 2) goto error;
+    if (LENGTH(args) != 2) goto error;
     if (CAR(interp->stack).idx != interp->top_level.idx) {
         return new_error(interp, "defvar: functions can only be defined in top level.\n");
     }
@@ -219,7 +219,7 @@ error:
 }
 
 SExpRef primitive_function(Interp *interp, SExpRef args) {
-    if (lisp_length(interp, args) != 1) goto error;
+    if (LENGTH(args) != 1) goto error;
     if (VALTYPE(CAR(args)) != kSymbolSExp) goto error;
     return lisp_lookup_func(interp, REF(CAR(args))->str);
 error:
@@ -256,7 +256,7 @@ static SExpRef build_function_env(Interp *interp, SExpRef func, SExpRef args) {
 }
 
 SExpRef primitive_funcall(Interp *interp, SExpRef args) {
-    if (lisp_length(interp, args) < 1) goto error;
+    if (LENGTH(args) < 1) goto error;
     args = lisp_eval_args(interp, args);
     if (ERRORP(args)) return args;
     return lisp_apply(interp, CAR(args), CDR(args));
@@ -265,14 +265,14 @@ error:
 }
 
 SExpRef primitive_quote(Interp *interp, SExpRef args) {
-    if (lisp_length(interp, args) != 1) return new_error(interp, "quote: syntax error.\n");
+    if (LENGTH(args) != 1) return new_error(interp, "quote: syntax error.\n");
     return CAR(args);
 }
 
 SExpRef primitive_macroexpand1(Interp *interp, SExpRef args) {
     SExpRef macro;
 
-    if (lisp_length(interp, args) != 1) goto error;
+    if (LENGTH(args) != 1) goto error;
     args = CAR(args);
     if (VALTYPE(CAR(args)) != kSymbolSExp) goto error;
     macro = lisp_lookup_func(interp, REF(CAR(args))->str);
@@ -285,7 +285,7 @@ error:
 SExpRef primitive_apply(Interp *interp, SExpRef args) {
     SExpRef ret;
 
-    if (lisp_length(interp, args) != 2) goto error;
+    if (LENGTH(args) != 2) goto error;
     args = lisp_eval_args(interp, args);
     if (ERRORP(args)) return args;
     if (!lisp_check_list(interp, CADR(args))) goto error;
@@ -307,7 +307,7 @@ static SExpRef quasi_impl(Interp *interp, SExpRef obj, bool *slicing) {
     if (VALTYPE(obj) != kPairSExp) return obj;
     if (VALTYPE(CAR(obj)) == kSymbolSExp
             && strcmp("unquote", REF(CAR(obj))->str) == 0) {
-        if (lisp_length(interp, obj) != 2) {
+        if (LENGTH(obj) != 2) {
             return new_error(interp, "unquote: syntax error.\n");
         }
         return EVAL(CADR(obj));
@@ -316,7 +316,7 @@ static SExpRef quasi_impl(Interp *interp, SExpRef obj, bool *slicing) {
             && strcmp("slicing-unquote", REF(CAR(obj))->str) == 0) {
         lst = EVAL(CADR(obj));
         if (ERRORP(lst)) return lst;
-        if (lisp_length(interp, obj) != 2) {
+        if (LENGTH(obj) != 2) {
             return new_error(interp, "slicing-unquote: syntax error.\n");
         }
         if (!lisp_check_list(interp, lst)) {
@@ -355,7 +355,7 @@ static SExpRef quasi_on_list(Interp *interp, SExpRef lst) {
 
 SExpRef primitive_quasi(Interp *interp, SExpRef args) {
     SExpRef ret;
-    if (lisp_length(interp, args) != 1) return new_error(interp, "quasiquote: syntax error.\n");
+    if (LENGTH(args) != 1) return new_error(interp, "quasiquote: syntax error.\n");
     bool slicing;
     ret = quasi_impl(interp, CAR(args), &slicing);
     if (slicing) return new_error(interp, "quasiquote: syntax error.\n");
@@ -365,7 +365,7 @@ SExpRef primitive_quasi(Interp *interp, SExpRef args) {
 SExpRef primitive_and(Interp *interp, SExpRef args) {
     SExpRef ret;
     SExpRef i = args;
-    if (lisp_length(interp, args) < 1) return new_error(interp, "and: syntax error.\n");
+    if (LENGTH(args) < 1) return new_error(interp, "and: syntax error.\n");
     while (!NILP(i)) {
         ret = EVAL(CAR(i));
         if (!TRUEP(ret)) return ret;
@@ -378,7 +378,7 @@ SExpRef primitive_or(Interp *interp, SExpRef args) {
     SExpRef ret;
     SExpRef i = args;
 
-    if (lisp_length(interp, args) < 1) return new_error(interp, "or: syntax error.\n");
+    if (LENGTH(args) < 1) return new_error(interp, "or: syntax error.\n");
     while (!NILP(i)) {
         ret = EVAL(CAR(i));
         if (TRUEP(ret)) return ret;

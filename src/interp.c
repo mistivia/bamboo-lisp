@@ -449,11 +449,16 @@ end:
 
 int lisp_length(Interp *interp, SExpRef lst) {
     int cnt = 0;
-    while (REF(lst)->type == kPairSExp) {
-        cnt++;
-        lst = CDR(lst);
+    if (VALTYPE(lst) == kPairSExp) {
+        while (REF(lst)->type == kPairSExp) {
+            cnt++;
+            lst = CDR(lst);
+        }
+        return cnt;
+    } else if (VALTYPE(lst) == kStringSExp) {
+        return strlen(REF(lst)->str);
     }
-    return cnt;
+    return 1;
 }
 
 static SExpRef build_function_env(Interp *interp, SExpRef func, SExpRef args) {
