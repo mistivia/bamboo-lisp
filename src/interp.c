@@ -55,6 +55,7 @@ void Interp_init(Interp *self) {
     Interp_add_primitive(self, "funcall", primitive_funcall);
     Interp_add_primitive(self, "apply", primitive_apply);
     Interp_add_primitive(self, "quote", primitive_quote);
+    Interp_add_primitive(self, "quasiquote", primitive_quasi);
 
     Interp_add_userfunc(self, "eval", lisp_eval);
     Interp_add_userfunc(self, "show", builtin_show);

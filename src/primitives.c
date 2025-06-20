@@ -241,6 +241,67 @@ error:
     return new_error(interp, "apply: syntax error.\n");
 }
 
+static SExpRef quasi_on_list(Interp *interp, SExpRef lst);
+static SExpRef quasi_impl(Interp *interp, SExpRef obj, bool *slicing);
+
+static SExpRef quasi_impl(Interp *interp, SExpRef obj, bool *slicing) {
+    *slicing = false;
+    if (VALTYPE(obj) != kPairSExp) return obj;
+    if (VALTYPE(CAR(obj)) == kSymbolSExp
+            && strcmp("unquote", REF(CAR(obj))->str) == 0) {
+        if (lisp_length(interp, obj) != 2) {
+            return new_error(interp, "unquote: syntax error.\n");
+        }
+        return EVAL(CADR(obj));
+    }
+    if (VALTYPE(CAR(obj)) == kSymbolSExp
+            && strcmp("slicing-unquote", REF(CAR(obj))->str) == 0) {
+        SExpRef lst = EVAL(CADR(obj));
+        if (ERRORP(lst)) return lst;
+        if (lisp_length(interp, obj) != 2) {
+            return new_error(interp, "slicing-unquote: syntax error.\n");
+        }
+        if (!lisp_check_list(interp, lst)) {
+            return new_error(interp, "slicing-unquote: not a list.\n");
+        }
+        *slicing = true;
+        return lst;
+    }
+    return quasi_on_list(interp, obj);
+}
+
+static SExpRef quasi_on_list(Interp *interp, SExpRef lst) {
+    SExpRef newlst = NIL;
+    bool slicing;
+    SExpRef iter = lst;
+    while (!NILP(iter)) {
+        SExpRef x = CAR(iter);
+        SExpRef newx = quasi_impl(interp, x, &slicing);
+        if (ERRORP(newx)) return newx;
+        if (slicing) {
+            SExpRef j = newx;
+            while (!NILP(j)) {
+                newlst = CONS(CAR(j), newlst);
+                j = CDR(j);
+            }
+        } else {
+            newlst = CONS(newx, newlst);
+        }
+        iter = CDR(iter);
+    }
+
+    return lisp_reverse(interp, newlst);
+}
+
+
+SExpRef primitive_quasi(Interp *interp, SExpRef args) {
+    if (lisp_length(interp, args) != 1) return new_error(interp, "quasiquote: syntax error.\n");
+    bool slicing;
+    SExpRef ret = quasi_impl(interp, CAR(args), &slicing);
+    if (slicing) return new_error(interp, "quasiquote: syntax error.\n");
+    return ret;
+}
+
 // TODO:
 // - defmacro
 // - macroexpand-1

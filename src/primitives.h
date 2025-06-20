@@ -16,5 +16,6 @@ SExpRef primitive_function(Interp *interp, SExpRef sexp);
 SExpRef primitive_funcall(Interp *interp, SExpRef sexp);
 SExpRef primitive_apply(Interp *interp, SExpRef sexp);
 SExpRef primitive_quote(Interp *interp, SExpRef sexp);
+SExpRef primitive_quasi(Interp *interp, SExpRef sexp);
 
 #endif

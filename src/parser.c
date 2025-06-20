@@ -349,7 +349,8 @@ ParseResult parse_string(Parser *parser) {
     Parser_getchar(parser);
     while (Parser_peek(parser) != '"') {
         if (Parser_peek(parser) == EOF) {
-            return ParseErr(parser, "Unexpected EOF.\n");
+            ret = ParseErr(parser, "Unexpected EOF.\n");
+            goto end;
         }
         if (Parser_peek(parser) == '\0') {
             ret = ParseErr(parser, "Unexpected zero terminator.\n");
@@ -360,7 +361,8 @@ ParseResult parse_string(Parser *parser) {
         } else {
             Parser_getchar(parser);
             if (Parser_peek(parser) == EOF) {
-                return ParseErr(parser, "Unexpected EOF.\n");
+                ret = ParseErr(parser, "Unexpected EOF.\n");
+                goto end;
             }
             int c = Parser_getchar(parser);
             if (c == EOF) {
@@ -377,6 +379,7 @@ ParseResult parse_string(Parser *parser) {
             }
         }
     }
+    Parser_getchar(parser);
     CharVector_push_back(&buf, '\0');
     ret = ParseOk(new_string(parser->ctx, buf.buffer));
 end:
