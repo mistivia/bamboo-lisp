@@ -22,6 +22,8 @@ make profile=release
 
 ## Example
 
+### 1. Y Combinator
+
 ```lisp
 (defun Y (f)
   (funcall
@@ -38,5 +40,21 @@ make profile=release
 (defvar fibo (Y #'fibo-impl))
 
 (funcall fibo 10)
+```
+
+### 2. Macro
+
+```lisp
+(defmacro inc (x)
+  `(setq ,x (+ ,x 1)))
+
+(defmacro for (start pred inc . body)
+  `(let (,start)
+     (while ,pred
+       ,@body
+       ,inc)))
+
+(for (i 0) (< i 10) (inc i)
+  (show "meow"))
 ```
 
