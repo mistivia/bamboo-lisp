@@ -23,18 +23,30 @@ void Interp_init(Interp *self) {
     IntVector_init(&self->empty_space);
     PrimitiveEntryVector_init(&self->primitives);
     String2IntHashTable_init(&self->symbols);
+    int i = 0;
     SExp sexp;
     sexp.type = kNilSExp;
     SExpVector_push_back(&self->objs, sexp);
-    self->nil = (SExpRef){0};
+    self->nil = (SExpRef){i}; i++;
 
     sexp.type = kEnvSExp;
     sexp.env.parent= self->nil;
     sexp.env.bindings = self->nil;
     SExpVector_push_back(&self->objs, sexp);
-    self->top_level = (SExpRef){1};
+    self->top_level = (SExpRef){i}; i++;
+
+    sexp.type = kBooleanSExp;
+    sexp.boolean = true;
+    SExpVector_push_back(&self->objs, sexp);
+    self->t= (SExpRef){i}; i++;
+
+    sexp.type = kBooleanSExp;
+    sexp.boolean = false;
+    SExpVector_push_back(&self->objs, sexp);
+    self->f = (SExpRef){i}; i++;
+
     sexp.type = kEmptySExp;
-    for (int i = 2; i < 1024; i++) {
+    for (; i < 1024; i++) {
         SExpVector_push_back(&self->objs, sexp);
         IntVector_push_back(&self->empty_space, i);
     }
@@ -58,6 +70,8 @@ void Interp_init(Interp *self) {
     Interp_add_primitive(self, "quote", primitive_quote);
     Interp_add_primitive(self, "quasiquote", primitive_quasi);
     Interp_add_primitive(self, "macroexpand-1", primitive_macroexpand1);
+    Interp_add_primitive(self, "and", primitive_and);
+    Interp_add_primitive(self, "or", primitive_or);
 
     Interp_add_userfunc(self, "eval", lisp_eval);
     Interp_add_userfunc(self, "show", builtin_show);
@@ -67,11 +81,17 @@ void Interp_init(Interp *self) {
     Interp_add_userfunc(self, "cons", builtin_cons);
     Interp_add_userfunc(self, "+", builtin_add);
     Interp_add_userfunc(self, "-", builtin_sub);
+    Interp_add_userfunc(self, "*", builtin_mul);
+    Interp_add_userfunc(self, "/", builtin_div);
+    Interp_add_userfunc(self, "i/", builtin_idiv);
+    Interp_add_userfunc(self, "mod", builtin_mod);
     Interp_add_userfunc(self, "=", builtin_num_equal);
+    Interp_add_userfunc(self, "/=", builtin_num_neq);
     Interp_add_userfunc(self, "<", builtin_lt);
     Interp_add_userfunc(self, ">", builtin_gt);
     Interp_add_userfunc(self, ">=", builtin_ge);
     Interp_add_userfunc(self, "<=", builtin_le);
+    Interp_add_userfunc(self, "not", builtin_not);
 }
 
 void Interp_add_userfunc(Interp *interp, const char *name, LispUserFunc fn) {
@@ -537,10 +557,8 @@ SExpRef new_binding(Interp *interp, SExpRef sym, SExpRef val) {
 }
 
 SExpRef new_boolean(Interp *interp, bool val) {
-    SExpRef ret = new_sexp(interp);
-    REF(ret)->type = kBooleanSExp;
-    REF(ret)->boolean = val;
-    return ret;
+    if (val) return interp->t;
+    return interp->f;
 }
 
 SExpRef new_error(Interp *interp, const char *format, ...) {

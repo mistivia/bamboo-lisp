@@ -26,6 +26,8 @@ struct interp {
     IntVector empty_space;
     String2IntHashTable symbols;
     SExpRef stack;
+    SExpRef t;
+    SExpRef f;
     SExpRef reg;
     SExpRef top_level;
     SExpRef nil;

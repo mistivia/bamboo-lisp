@@ -327,6 +327,30 @@ SExpRef primitive_quasi(Interp *interp, SExpRef args) {
     return ret;
 }
 
+SExpRef primitive_and(Interp *interp, SExpRef args) {
+    if (lisp_length(interp, args) < 1) return new_error(interp, "and: syntax error.\n");
+    SExpRef ret;
+    SExpRef i = args;
+    while (!NILP(i)) {
+        ret = EVAL(CAR(i));
+        if (!TRUEP(ret)) return ret;
+        i = CDR(i);
+    }
+    return ret;
+}
+
+SExpRef primitive_or(Interp *interp, SExpRef args) {
+    if (lisp_length(interp, args) < 1) return new_error(interp, "or: syntax error.\n");
+    SExpRef ret;
+    SExpRef i = args;
+    while (!NILP(i)) {
+        ret = EVAL(CAR(i));
+        if (TRUEP(ret)) return ret;
+        i = CDR(i);
+    }
+    return ret;
+}
+
 // TODO:
 // - defmacro
 // - macroexpand-1
