@@ -51,6 +51,7 @@ void Interp_init(Interp *self) {
     Interp_add_primitive(self, "lambda", primitive_lambda);
     Interp_add_primitive(self, "function", primitive_function);
     Interp_add_primitive(self, "defun", primitive_defun);
+    Interp_add_primitive(self, "defvar", primitive_defvar);
 
     Interp_add_userfunc(self, "car", builtin_car);
     Interp_add_userfunc(self, "list", builtin_list);
@@ -228,6 +229,23 @@ void lisp_defun(Interp *interp, const char *name, SExpRef val) {
     binding = REF(interp->top_level)->env.bindings;
     SExpRef newbinding = new_binding(interp, new_symbol(interp, name), NIL);
     REF(newbinding)->binding.func = val;
+    REF(newbinding)->binding.next = binding;
+    REF(interp->top_level)->env.bindings = newbinding;
+}
+
+void lisp_defvar(Interp *interp, const char *name, SExpRef val) {
+    SExpRef binding = REF(interp->top_level)->env.bindings;
+    while (REF(binding)->type != kNilSExp) {
+        if (strcmp(name, REF(REF(binding)->binding.name)->str) == 0) {
+            REF(binding)->binding.value = val;
+            return;
+        }
+        binding = REF(binding)->binding.next;
+    }
+    binding = REF(interp->top_level)->env.bindings;
+    SExpRef newbinding = new_binding(interp, new_symbol(interp, name), NIL);
+    REF(newbinding)->binding.func = unbound;
+    REF(newbinding)->binding.value = val;
     REF(newbinding)->binding.next = binding;
     REF(interp->top_level)->env.bindings = newbinding;
 }

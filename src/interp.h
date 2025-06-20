@@ -61,6 +61,7 @@ void Interp_add_userfunc(Interp *self, const char *name, LispUserFunc fn);
 #define POP_REG() { interp->reg = CDR(interp->reg);  }
 
 void lisp_defun(Interp *interp, const char *name, SExpRef val);
+void lisp_defvar(Interp *interp, const char *name, SExpRef val);
 void lisp_print(Interp *interp, SExpRef obj, FILE *fp);
 SExpRef lisp_lookup(Interp *interp, const char *name);
 SExpRef lisp_lookup_func(Interp *interp, const char *name);

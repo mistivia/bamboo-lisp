@@ -165,6 +165,22 @@ error:
     return new_error(interp, "defun: syntax error.\n");
 }
 
+SExpRef primitive_defvar(Interp *interp, SExpRef args) {
+    if (lisp_length(interp, args) != 2) goto error;
+    if (CAR(interp->stack).idx != interp->top_level.idx) {
+        return new_error(interp, "defvar: functions can only be defined in top level.\n");
+    }
+    SExpRef name = CAR(args);
+    if (VALTYPE(name) != kSymbolSExp) goto error;
+    SExpRef exp = CADR(args);
+    SExpRef val = EVAL(exp);
+    if (ERRORP(val)) return val;
+    lisp_defvar(interp, REF(name)->str, val);
+    return name;
+error:
+    return new_error(interp, "defvar: syntax error.\n");
+}
+
 SExpRef primitive_function(Interp *interp, SExpRef args) {
     if (lisp_length(interp, args) != 1) goto error;
     if (VALTYPE(CAR(args)) != kSymbolSExp) goto error;

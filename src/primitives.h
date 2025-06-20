@@ -11,6 +11,7 @@ SExpRef primitive_let(Interp *interp, SExpRef sexp);
 SExpRef primitive_while(Interp *interp, SExpRef sexp);
 SExpRef primitive_lambda(Interp *interp, SExpRef sexp);
 SExpRef primitive_defun(Interp *interp, SExpRef sexp);
+SExpRef primitive_defvar(Interp *interp, SExpRef sexp);
 SExpRef primitive_function(Interp *interp, SExpRef sexp);
 
 #endif
