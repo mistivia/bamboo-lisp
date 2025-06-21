@@ -8,7 +8,7 @@ ifeq ($(mode), debug)
 		-g \
 		-fsanitize=address
 else
-	cflags = $(includes) -flto -O2
+	cflags = $(includes) -g -flto -O2
 endif
 
 src = $(shell find src/ -name '*.c' -not -name 'main.c')

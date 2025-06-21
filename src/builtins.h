@@ -3,6 +3,8 @@
 
 #include "interp.h"
 
+SExpRef builtin_equal(Interp *interp, SExpRef sexp);
+SExpRef builtin_eq(Interp *interp, SExpRef sexp);
 SExpRef builtin_format(Interp *interp, SExpRef sexp);
 SExpRef builtin_concat(Interp *interp, SExpRef sexp);
 SExpRef builtin_print(Interp *interp, SExpRef sexp);

@@ -776,6 +776,8 @@ SExpRef new_binding(Interp *interp, SExpRef sym, SExpRef val) {
     REF(ret)->type = kBindingSExp;
     REF(ret)->binding.name = sym;
     REF(ret)->binding.value = val;
+    REF(ret)->binding.func = unbound;
+    REF(ret)->binding.next = NIL;
     return ret;
 }
 
