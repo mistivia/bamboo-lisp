@@ -2,9 +2,34 @@
 
 Embeddable & Hackable Lisp-2 Interpreter
 
-(Work in Progress)
+## WARNING
+
+This project is still a toy project in very early stage. Don't use it in production!
+
+## Features & Drawbacks
+
+- Lisp-2 (more like Common Lisp or Emacs Lisp)
+- Lexical scoping
+- < 3000 LOC 
+- Tail call optimization
+- Any C99 compiler should work
+- Depend only on standard library
+- A little bit slow (trade-off for simplicity)
+- A simple mark-sweep GC
+- Writing macro is easy with quasiquote, unquote, and slicing-unquote
+- No global state, you can run multiple interpreters in multiple threads
+- Support C-like control flow statements
+    - return
+    - break
+    - continue
 
 ## Build
+
+Init submodule:
+
+```bash
+git submodule init --recursive
+```
 
 Debug:
 
@@ -16,11 +41,28 @@ make
 Release:
 
 ```bash
-git submodule init --recursive
-make profile=release
+make clean
+make mode=release
+```
+
+## Usage
+
+After building, you can run the Bamboo Lisp interpreter using:
+
+```bash
+./bamboo-lisp # To enter the REPL (if applicable)
+./bamboo-lisp <filename.lisp> # To run a Lisp file
+```
+
+You can use `load` to load a lisp script into the interpreter:
+
+```lisp
+(load "my-script.lisp")
 ```
 
 ## Example
+
+See `tests/` for more examples.
 
 ### 1. Y Combinator
 
@@ -40,6 +82,7 @@ make profile=release
 (defvar fibo (Y #'fibo-impl))
 
 (funcall fibo 10)
+;; Expected output: 55
 ```
 
 ### 2. Macro
@@ -55,6 +98,11 @@ make profile=release
        ,inc)))
 
 (for (i 0) (< i 10) (inc i)
-  (show "meow"))
+  (princ "meow\n"))
+
+;; Expected output:
+;; meow
+;; meow
+;; ... (10 times)
 ```
 
