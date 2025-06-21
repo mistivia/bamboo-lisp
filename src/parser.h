@@ -12,7 +12,7 @@ typedef enum {
     kParseReadline,
 } ParseType;
 
-typedef struct {
+struct parser {
     Interp *ctx;
     char *errmsg_buf;
     char *token_buf;
@@ -26,7 +26,8 @@ typedef struct {
         };
         FILE *fp;
     };
-} Parser;
+};
+typedef struct parser Parser;
 
 void Parser_init(Parser *self);
 void Parser_free(Parser *self);
@@ -35,6 +36,7 @@ int Parser_peek(Parser *self);
 void Parser_set_string(Parser *parser, const char *str);
 void Parser_set_file(Parser *parser, FILE *fp);
 void Parser_set_readline(Parser *parser);
+bool Parser_is_end(Parser *parser);
 
 typedef struct {
     SExpRef val;

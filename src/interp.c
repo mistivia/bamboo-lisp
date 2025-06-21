@@ -9,6 +9,8 @@
 #include "sexp.h"
 #include "builtins.h"
 #include "primitives.h"
+#include "parser.h"
+#include "prelude.h"
 
 #define BUFSIZE 1024
 
@@ -18,6 +20,9 @@ VECTOR_IMPL(PrimitiveEntry);
 SExpRef unbound = {-1};
 
 void Interp_init(Interp *self) {
+    self->parser = malloc(sizeof(Parser));
+    Parser_init(self->parser);
+    self->parser->ctx = self;
     self->errmsg_buf = malloc(BUFSIZE);
     SExpVector_init(&self->objs);
     IntVector_init(&self->empty_space);
@@ -93,6 +98,71 @@ void Interp_init(Interp *self) {
     Interp_add_userfunc(self, "<=", builtin_le);
     Interp_add_userfunc(self, "not", builtin_not);
     Interp_add_userfunc(self, "gcstat", builtin_gcstat);
+
+    SExpRef ret = Interp_eval_string(self, bamboo_lisp_prelude);
+    Interp *interp = self;
+    if (VALTYPE(ret) == kErrSignal) {
+        fprintf(stderr, "Failed to load prelude: %s", REF(ret)->str);
+    }   
+}
+
+SExpRef Interp_eval_string(Interp *interp, const char * str) {
+    Parser_set_string(interp->parser, str);
+    SExpRef sexp, ret;
+    ParseResult parse_result;
+    while (1) {
+        parse_result = parse_sexp(interp->parser);
+        if (parse_result.errmsg != NULL) {
+            ret = new_error(interp, "Parsing error: %s", parse_result.errmsg);
+            goto end;
+        }
+        ret = lisp_eval(interp, parse_result.val, false);
+        if (Interp_ref(interp, ret)->type == kErrSignal) {
+            goto end;
+        }
+        if (Interp_ref(interp, ret)->type == kBreakSignal
+                || Interp_ref(interp, ret)->type == kContinueSignal
+                || Interp_ref(interp, ret)->type == kReturnSignal) {
+            ret = new_error(interp, "Eval error: unexpected control flow signal.\n");
+            goto end;
+        }
+        if (Parser_is_end(interp->parser)) goto end;
+    }
+end:
+    return ret;
+}
+
+SExpRef Interp_load_file(Interp *interp, const char *filename) {
+    FILE *fp = NULL;
+    fp = fopen(filename, "r");
+    if (fp == NULL) {
+        return new_error(interp, "Failed to open file: %s\n", filename);
+        goto end;
+    }
+    Parser_set_file(interp->parser, fp);
+    SExpRef sexp, ret;
+    ParseResult parse_result;
+    while (1) {
+        parse_result = parse_sexp(interp->parser);
+        if (parse_result.errmsg != NULL) {
+            ret = new_error(interp, "Parsing error: %s", parse_result.errmsg);
+            goto end;
+        }
+        ret = lisp_eval(interp, parse_result.val, false);
+        if (Interp_ref(interp, ret)->type == kErrSignal) {
+            goto end;
+        }
+        if (Interp_ref(interp, ret)->type == kBreakSignal
+                || Interp_ref(interp, ret)->type == kContinueSignal
+                || Interp_ref(interp, ret)->type == kReturnSignal) {
+            ret = new_error(interp, "Eval error: unexpected control flow signal.\n");
+            goto end;
+        }
+        if (Parser_is_end(interp->parser)) goto end;
+    }
+end:
+    fclose(fp);
+    return ret;
 }
 
 void Interp_add_userfunc(Interp *interp, const char *name, LispUserFunc fn) {
@@ -117,6 +187,8 @@ void Interp_free(Interp *self) {
     IntVector_free(&self->empty_space);
     PrimitiveEntryVector_free(&self->primitives);
     free(self->errmsg_buf);
+    Parser_free(self->parser);
+    free(self->parser);
 }
 
 SExp* Interp_ref(Interp *self, SExpRef ref) {
@@ -172,6 +244,11 @@ void Interp_gc(Interp *interp, SExpRef tmproot) {
         } else if (obj->type == kMacroSExp) {
             SExpRefVector_push_back(&gcstack, obj->macro.args);
             SExpRefVector_push_back(&gcstack, obj->macro.body);
+        } else if (obj->type == kReturnSignal || obj->type == kBreakSignal) {
+            SExpRefVector_push_back(&gcstack, obj->ret);
+        } else if (obj->type == kTailcallSExp) {
+            SExpRefVector_push_back(&gcstack, obj->tailcall.args);
+            SExpRefVector_push_back(&gcstack, obj->tailcall.fn);
         }
     }
     SExpRefVector_free(&gcstack);
@@ -548,6 +625,7 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
             || type == kBreakSignal
             || type == kContinueSignal
             || type == kReturnSignal
+            || type == kTailcallSExp
             || type == kFuncSExp
             || type == kUserFuncSExp
             || type == kRealSExp) {

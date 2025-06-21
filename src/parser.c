@@ -11,10 +11,17 @@
 
 #define BUFSIZE 1024
 
+
 static void skip_spaces(Parser *parser) {
     while (isspace(Parser_peek(parser))) {
         Parser_getchar(parser);
     }
+}
+
+bool Parser_is_end(Parser *parser) {
+    skip_spaces(parser);
+    if (Parser_peek(parser) == EOF) return true;
+    return false;
 }
 
 ParseResult ParseOk(SExpRef ref) {

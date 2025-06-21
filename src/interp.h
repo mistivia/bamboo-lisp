@@ -8,6 +8,9 @@
 #include "algds/vec.h"
 #include "sexp.h"
 
+struct parser;
+typedef struct parser Parser;
+
 struct interp;
 typedef struct interp Interp;
 
@@ -32,6 +35,7 @@ struct interp {
     SExpRef top_level;
     SExpRef nil;
     char *errmsg_buf;
+    Parser *parser;
 };
 
 void Interp_init(Interp *self);
@@ -42,8 +46,7 @@ void Interp_add_primitive(Interp *self, const char *name, LispPrimitive fn);
 void Interp_add_userfunc(Interp *self, const char *name, LispUserFunc fn);
 
 SExpRef Interp_eval_string(Interp *interp, const char * str);
-void Interp_load_file(Interp *interp, const char *filename);
-void Interp_eval_readline(Interp *interp);
+SExpRef Interp_load_file(Interp *interp, const char *filename);
 
 #define REF(_x) (&(interp->objs.buffer)[(_x).idx])
 #define CONS(_x, _y) (lisp_cons(interp, (_x), (_y)))

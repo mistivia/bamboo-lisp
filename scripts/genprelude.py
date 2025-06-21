@@ -26,6 +26,6 @@ escaped = escape_c_string(content)
 print(f"""
 #include "prelude.h"
 
-const char *prelude = "{escaped}";
+const char *bamboo_lisp_prelude = "{escaped}";
 
 """)

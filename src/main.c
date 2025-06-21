@@ -5,20 +5,17 @@
 int main() {
     int ret = -1;
     Interp interp;
-    Parser parser;
     Interp_init(&interp);
-    Parser_init(&parser);
-    parser.ctx = &interp;
-    Parser_set_readline(&parser);
+    Parser_set_readline(interp.parser);
     SExpRef sexp, res;
     ParseResult parse_result;
     while (1) {
-        parse_result = parse_sexp(&parser);
+        parse_result = parse_sexp(interp.parser);
         if (parse_result.errmsg != NULL) {
-            if (Parser_peek(&parser) == EOF) goto end;
+            if (Parser_peek(interp.parser) == EOF) goto end;
             fprintf(stderr, "Parsing error: %s", parse_result.errmsg);
-            free((void*)parser.string);
-            Parser_set_readline(&parser);
+            free((void*)interp.parser->string);
+            Parser_set_readline(interp.parser);
             continue;
         }
 
@@ -36,7 +33,6 @@ int main() {
         lisp_print(&interp, res, stdout);
     }
 end:
-    Parser_free(&parser);
     Interp_free(&interp);
     return 0;
 }
