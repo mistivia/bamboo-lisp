@@ -13,8 +13,8 @@ This project is still a toy project in very early stage. Don't use it in product
 - < 3000 LOC 
 - Tail call optimization
 - Any C99 compiler should work
-- Depend only on standard library
-- A little bit slow (trade-off for simplicity)
+- Depends only on C standard library
+- SLOW (trade-off for simplicity)
 - A simple mark-sweep GC
 - Writing macro is easy with quasiquote, unquote, and slicing-unquote
 - No global state, you can run multiple interpreters in multiple threads
