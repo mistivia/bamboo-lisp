@@ -33,6 +33,10 @@ test: $(tests_bin)
 	@echo
 	@echo "Run tests:"
 	@scripts/runall.sh $^
+	@echo "Run scripts:"
+	cd tests/lisp && \
+		../../bamboo-lisp test.lisp
+
 
 $(obj):%.o:%.c
 	$(cc) -c $(cflags) $< -MD -MF $@.d -o $@

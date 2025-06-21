@@ -2,10 +2,28 @@
 #include "parser.h"
 #include "sexp.h"
 
-int main() {
-    int ret = -1;
+int main(int argc, char **argv) {
+    int mainret = 0;
     Interp interp;
     Interp_init(&interp);
+    if (argc > 2) {
+        fprintf(stderr, "Usage: bamboo-lisp [file.lisp]\n");
+        return -1;
+    }
+    if (argc == 2) {
+        const char *filename = argv[1];
+        SExpRef ret = Interp_load_file(&interp, filename);
+        if (Interp_ref(&interp, ret)->type == kErrSignal) {
+            fprintf(stderr, "Error: %s", Interp_ref(&interp, ret)->str);
+            mainret = -1; goto end;
+        }
+        if (Interp_ref(&interp, ret)->type == kBreakSignal
+                || Interp_ref(&interp, ret)->type == kContinueSignal
+                || Interp_ref(&interp, ret)->type == kReturnSignal) {
+            fprintf(stderr, "Error: unexpected control flow signal.\n");
+            mainret = -1; goto end;
+        }
+    }
     Parser_set_readline(interp.parser);
     SExpRef sexp, res;
     ParseResult parse_result;
@@ -34,5 +52,5 @@ int main() {
     }
 end:
     Interp_free(&interp);
-    return 0;
+    return mainret;
 }

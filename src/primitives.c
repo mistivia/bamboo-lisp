@@ -1,6 +1,76 @@
 #include "primitives.h"
 #include "interp.h"
 #include "sexp.h"
+#include "parser.h"
+
+SExpRef primitive_assert_error(Interp *interp, SExpRef args, bool istail) {
+    SExpRef eargs = lisp_eval_args(interp, args);
+    if (VALTYPE(eargs) == kErrSignal) return interp->t;
+    return new_error(interp, "assert-error failed: no error.\n");
+}
+
+SExpRef primitive_load(Interp *interp, SExpRef args, bool istail) {
+    if (CAR(interp->stack).idx != interp->top_level.idx) {
+        return new_error(interp, "load: load can only be in top level.\n");
+    }
+    if (LENGTH(args) != 1) return new_error(interp, "load: syntax error.\n");
+    if (VALTYPE(CAR(args)) != kStringSExp) return new_error(interp, "load: syntax error.\n");
+    Parser *old_parser = interp->parser;
+    Parser *new_parser = malloc(sizeof(Parser));
+    Parser_init(new_parser);
+    new_parser->ctx = interp;
+    interp->parser = new_parser;
+    SExpRef ret = Interp_load_file(interp, REF(CAR(args))->str);
+    Parser_free(new_parser);
+    free(new_parser);
+    interp->parser = old_parser;
+    return ret;
+}
+
+SExpRef primitive_return(Interp *interp, SExpRef args, bool istail) {
+    if (LENGTH(args) > 1) {
+        return new_error(interp, "return: syntax error.\n");
+    }
+    SExpRef ret = NIL;
+    if (!NILP(args)) {
+        ret = lisp_eval(interp, CAR(args), true);
+    }
+    return new_return(interp, ret);
+}
+
+SExpRef primitive_break(Interp *interp, SExpRef args, bool istail) {
+    if (LENGTH(args) > 0) {
+        return new_error(interp, "break: syntax error.\n");
+    }
+    return new_break(interp);
+}
+
+SExpRef primitive_continue(Interp *interp, SExpRef args, bool istail) {
+    if (LENGTH(args) > 0) {
+        return new_error(interp, "continue: syntax error.\n");
+    }
+    return new_continue(interp);
+}
+
+SExpRef primitive_assert(Interp *interp, SExpRef args, bool istail) {
+    SExpRef eargs = lisp_eval_args(interp, args);
+    if (LENGTH(args) != 1) {
+        return new_error(interp, "assert: expect 1 arg.\n");
+    }
+    if (TRUEP(CAR(eargs))) {
+        return interp->t;
+    } else {
+        const char *expstr = lisp_to_string(interp, args);
+        SExpRef ret = new_error(interp, "Assertion failed: %s.\n", expstr);
+        free((void*)expstr);
+        return ret;
+    }
+}
+
+SExpRef primitive_eval(Interp *interp, SExpRef args, bool istail) {
+    args = lisp_eval_args(interp, args);
+    return lisp_eval(interp, args, istail);
+}
 
 SExpRef primitive_if(Interp *interp, SExpRef args, bool istail) {
     SExpRef cond, tb, fb;
@@ -111,7 +181,10 @@ SExpRef primitive_let(Interp *interp, SExpRef args, bool istail) {
     while (!NILP(iter)) {
         x = CAR(iter);
         val = EVAL(CADR(x));
-        if (CTL_FL(val)) goto end;
+        if (CTL_FL(val)) {
+            ret = val;
+            goto end;
+        }
         ret = lisp_setq(interp, REF(CAR(x))->str, val);
         if (CTL_FL(ret)) goto end;
         iter = CDR(iter);
@@ -127,7 +200,7 @@ SExpRef primitive_let(Interp *interp, SExpRef args, bool istail) {
         } else {
             ret = EVAL(exp);
         }
-        if (CTL_FL(val)) goto end;
+        if (CTL_FL(ret)) goto end;
         iter = CDR(iter);
     }
 end:
@@ -154,7 +227,7 @@ nextloop:
             }
             return cond;
         }
-        if (!TRUEP(cond)) return ret;
+        if (!TRUEP(cond)) return NIL;
         iter = body;
         while (!NILP(iter)) {
             x = CAR(iter);
@@ -163,7 +236,7 @@ nextloop:
                 return ret;
             }
             if (VALTYPE(ret) == kBreakSignal) {
-                return REF(ret)->ret;
+                return NIL;
             }
             if (VALTYPE(ret) == kContinueSignal) {
                 goto nextloop;
@@ -358,7 +431,9 @@ static SExpRef quasi_on_list(Interp *interp, SExpRef lst) {
     iter = lst;
     while (!NILP(iter)) {
         x = CAR(iter);
+        PUSH_REG(newlst);
         newx = quasi_impl(interp, x, &slicing);
+        POP_REG();
         if (CTL_FL(newx)) return newx;
         if (slicing) {
             j = newx;

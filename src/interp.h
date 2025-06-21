@@ -76,6 +76,7 @@ SExpRef Interp_load_file(Interp *interp, const char *filename);
 #define PUSH_REG(_x) { interp->reg = CONS((_x), interp->reg); }
 #define POP_REG() { interp->reg = CDR(interp->reg);  }
 
+const char* lisp_to_string(Interp *interp, SExpRef val);
 SExpRef lisp_macroexpand1(Interp *interp, SExpRef macro, SExpRef args);
 SExpRef lisp_reverse(Interp *interp, SExpRef lst);
 void lisp_defun(Interp *interp, const char *name, SExpRef val);
@@ -102,6 +103,9 @@ SExpRef lisp_div(Interp *interp, SExpRef args);
 
 SExpRef new_error(Interp *interp, const char *format, ...);
 SExpRef new_sexp(Interp *ctx);
+SExpRef new_return(Interp *ctx, SExpRef ret);
+SExpRef new_break(Interp *ctx);
+SExpRef new_continue(Interp *ctx);
 SExpRef new_boolean(Interp *ctx, bool val);
 SExpRef new_char(Interp *ctx, char val);
 SExpRef new_integer(Interp *ctx, int64_t val);

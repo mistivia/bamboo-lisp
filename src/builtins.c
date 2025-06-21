@@ -2,6 +2,33 @@
 #include "interp.h"
 #include "sexp.h"
 
+SExpRef builtin_exit(Interp *interp, SExpRef args) {
+    if (LENGTH(args) == 0) {
+        Interp_free(interp);
+        exit(0);
+    }
+    if (LENGTH(args) == 1) {
+        SExpRef x = CAR(args);
+        if (VALTYPE(x) != kIntegerSExp) goto error;
+        int retcode = REF(x)->integer;
+        Interp_free(interp);
+        exit(retcode);
+    }
+error:
+    return new_error(interp, "exit: argument error.\n");
+}
+
+SExpRef builtin_error(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "err.\n");
+    if (VALTYPE(CAR(args)) == kStringSExp || VALTYPE(CAR(args)) == kSymbolSExp) {
+        return new_error(interp, "%s\n", REF(CAR(args))->str);
+    }
+    const char *str = lisp_to_string(interp, CAR(args));
+    SExpRef ret = new_error(interp, "%s\n", REF(CAR(args))->str);
+    free((void*)str);
+    return ret;
+}
+
 SExpRef builtin_list(Interp *interp, SExpRef args) {
     return args;
 }

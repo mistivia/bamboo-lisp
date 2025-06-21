@@ -60,6 +60,7 @@ void Interp_init(Interp *self) {
     self->stack = lisp_cons(self, self->top_level, self->nil);
     self->reg = self->nil;
 
+    Interp_add_primitive(self, "eval", primitive_eval);
     Interp_add_primitive(self, "if", primitive_if);
     Interp_add_primitive(self, "cond", primitive_cond);
     Interp_add_primitive(self, "progn", primitive_progn);
@@ -78,7 +79,14 @@ void Interp_init(Interp *self) {
     Interp_add_primitive(self, "macroexpand-1", primitive_macroexpand1);
     Interp_add_primitive(self, "and", primitive_and);
     Interp_add_primitive(self, "or", primitive_or);
+    Interp_add_primitive(self, "return", primitive_return);
+    Interp_add_primitive(self, "break", primitive_break);
+    Interp_add_primitive(self, "continue", primitive_continue);
+    Interp_add_primitive(self, "assert", primitive_assert);
+    Interp_add_primitive(self, "assert-error", primitive_assert_error);
+    Interp_add_primitive(self, "load", primitive_load);
 
+    Interp_add_userfunc(self, "error", builtin_error);
     Interp_add_userfunc(self, "show", builtin_show);
     Interp_add_userfunc(self, "car", builtin_car);
     Interp_add_userfunc(self, "list", builtin_list);
@@ -97,7 +105,9 @@ void Interp_init(Interp *self) {
     Interp_add_userfunc(self, ">=", builtin_ge);
     Interp_add_userfunc(self, "<=", builtin_le);
     Interp_add_userfunc(self, "not", builtin_not);
-    Interp_add_userfunc(self, "gcstat", builtin_gcstat);
+    Interp_add_userfunc(self, "exit", builtin_exit);
+    // debug functions
+    Interp_add_userfunc(self, "_gcstat", builtin_gcstat);
 
     SExpRef ret = Interp_eval_string(self, bamboo_lisp_prelude);
     Interp *interp = self;
@@ -244,7 +254,7 @@ void Interp_gc(Interp *interp, SExpRef tmproot) {
         } else if (obj->type == kMacroSExp) {
             SExpRefVector_push_back(&gcstack, obj->macro.args);
             SExpRefVector_push_back(&gcstack, obj->macro.body);
-        } else if (obj->type == kReturnSignal || obj->type == kBreakSignal) {
+        } else if (obj->type == kReturnSignal) {
             SExpRefVector_push_back(&gcstack, obj->ret);
         } else if (obj->type == kTailcallSExp) {
             SExpRefVector_push_back(&gcstack, obj->tailcall.args);
@@ -533,7 +543,9 @@ end:
 
 int lisp_length(Interp *interp, SExpRef lst) {
     int cnt = 0;
-    if (VALTYPE(lst) == kPairSExp) {
+    if (VALTYPE(lst) == kNilSExp) {
+        return 0;
+    } else if (VALTYPE(lst) == kPairSExp) {
         while (REF(lst)->type == kPairSExp) {
             cnt++;
             lst = CDR(lst);
@@ -541,8 +553,7 @@ int lisp_length(Interp *interp, SExpRef lst) {
         return cnt;
     } else if (VALTYPE(lst) == kStringSExp) {
         return strlen(REF(lst)->str);
-    }
-    return 1;
+    } else return -1;
 }
 
 static SExpRef build_function_env(Interp *interp, SExpRef func, SExpRef args) {
@@ -701,7 +712,9 @@ end:
     return ret;
 tailcall:
     while (1) {
+        PUSH_REG(CONS(fn, args));
         ret = lisp_apply(interp, fn, args, false);
+        POP_REG();
         if (VALTYPE(ret) != kTailcallSExp) break;
         fn = REF(ret)->tailcall.fn;
         args = REF(ret)->tailcall.args;
@@ -832,5 +845,27 @@ SExpRef new_symbol(Interp *interp, const char *val) {
     } else {
         return (SExpRef){ iter->val };
     }
+}
+
+SExpRef new_return(Interp *interp, SExpRef obj) {
+    SExpRef ret = new_sexp(interp);
+    SExp *psexp = Interp_ref(interp, ret);
+    psexp->type = kReturnSignal;
+    psexp->ret = obj;
+    return ret;
+}
+
+SExpRef new_break(Interp *interp) {
+    SExpRef ret = new_sexp(interp);
+    SExp *psexp = Interp_ref(interp, ret);
+    psexp->type = kBreakSignal;
+    return ret;
+}
+
+SExpRef new_continue(Interp *interp) {
+    SExpRef ret = new_sexp(interp);
+    SExp *psexp = Interp_ref(interp, ret);
+    psexp->type = kContinueSignal;
+    return ret;
 }
 
