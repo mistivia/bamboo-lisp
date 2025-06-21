@@ -2,7 +2,7 @@
 #include "interp.h"
 #include "sexp.h"
 
-SExpRef primitive_if(Interp *interp, SExpRef args) {
+SExpRef primitive_if(Interp *interp, SExpRef args, bool istail) {
     SExpRef cond, tb, fb;
 
     if (LENGTH(args) != 3) goto error;
@@ -10,15 +10,14 @@ SExpRef primitive_if(Interp *interp, SExpRef args) {
     tb = CADR(args);
     fb = CADDR(args);
     cond = EVAL(cond);
-    if (ERRORP(cond)) return cond;
-    if (TRUEP(cond)) return EVAL(tb);
-    else return EVAL(fb);
-    return NIL;
+    if (CTL_FL(cond)) return cond;
+    if (TRUEP(cond)) return lisp_eval(interp, tb, istail);
+    else return lisp_eval(interp, fb, istail);
 error:
     return new_error(interp, "if: syntax error.\n");
 }
 
-SExpRef primitive_cond(Interp *interp, SExpRef args) {
+SExpRef primitive_cond(Interp *interp, SExpRef args, bool istail) {
     SExpRef pair, condition, exp, iter;
 
     if (LENGTH(args) < 1) goto error;
@@ -30,8 +29,8 @@ SExpRef primitive_cond(Interp *interp, SExpRef args) {
         condition = CAR(pair);
         exp = CADR(pair);
         condition = EVAL(condition);
-        if (ERRORP(condition)) return condition;
-        if (TRUEP(condition)) return EVAL(exp);
+        if (CTL_FL(condition)) return condition;
+        if (TRUEP(condition)) return lisp_eval(interp, exp, istail);
         iter = CDR(iter);
     }
     return NIL;
@@ -39,19 +38,23 @@ error:
     return new_error(interp, "cond: syntax error.\n");
 }
 
-SExpRef primitive_progn(Interp *interp, SExpRef args) {
+SExpRef primitive_progn(Interp *interp, SExpRef args, bool istail) {
     SExpRef iter = args;
     SExpRef ret;
 
     while (!NILP(iter)) {
-        ret = EVAL(CAR(iter));
-        if (ERRORP(ret)) return ret;
+        if (NILP(CDR(iter))) {
+            return lisp_eval(interp, CAR(iter), istail);
+        } else {
+            ret = EVAL(CAR(iter));
+        }
+        if (CTL_FL(ret)) return ret;
         iter = CDR(iter);
     }
     return ret;
 }
 
-SExpRef primitive_setq(Interp *interp, SExpRef args) {
+SExpRef primitive_setq(Interp *interp, SExpRef args, bool istail) {
     SExpRef name, exp, value;
 
     if (LENGTH(args) != 2) goto error;
@@ -59,7 +62,7 @@ SExpRef primitive_setq(Interp *interp, SExpRef args) {
     exp = CADR(args);
     if (REF(name)->type != kSymbolSExp) goto error;
     value = EVAL(exp);
-    if (ERRORP(value)) return value;
+    if (CTL_FL(value)) return value;
     return lisp_setq(interp, REF(name)->str, value);
 error:
     return new_error(interp, "setq: syntax error.\n");
@@ -80,7 +83,7 @@ static bool is_binding_repeat(Interp *interp, SExpRef sym, SExpRef env) {
     return false;
 }
 
-SExpRef primitive_let(Interp *interp, SExpRef args) {
+SExpRef primitive_let(Interp *interp, SExpRef args, bool istail) {
     SExpRef binding, iter, bindings, env, x,
             val, body, ret, exp;
 
@@ -108,9 +111,9 @@ SExpRef primitive_let(Interp *interp, SExpRef args) {
     while (!NILP(iter)) {
         x = CAR(iter);
         val = EVAL(CADR(x));
-        if (REF(val)->type == kErrSExp) goto end;
+        if (CTL_FL(val)) goto end;
         ret = lisp_setq(interp, REF(CAR(x))->str, val);
-        if (ERRORP(ret)) goto end;
+        if (CTL_FL(ret)) goto end;
         iter = CDR(iter);
     }
 
@@ -118,8 +121,13 @@ SExpRef primitive_let(Interp *interp, SExpRef args) {
     iter = body;
     while (!NILP(iter)) {
         exp = CAR(iter);
-        ret = EVAL(exp);
-        if (REF(ret)->type == kErrSExp) goto end;
+        if (NILP(CDR(iter))) {
+            ret = lisp_eval(interp, exp, istail);
+            goto end;
+        } else {
+            ret = EVAL(exp);
+        }
+        if (CTL_FL(val)) goto end;
         iter = CDR(iter);
     }
 end:
@@ -130,7 +138,7 @@ error:
     return new_error(interp, "let: syntax error. \n");
 }
 
-SExpRef primitive_while(Interp *interp, SExpRef args) {
+SExpRef primitive_while(Interp *interp, SExpRef args, bool istail) {
     SExpRef ret, pred, body, cond, iter, x;
 
     if (LENGTH(args) < 2) goto error;
@@ -138,14 +146,28 @@ SExpRef primitive_while(Interp *interp, SExpRef args) {
     pred = CAR(args);
     body = CDR(args);
     while (1) {
+nextloop:
         cond = EVAL(pred);
-        if (ERRORP(cond)) return cond;
+        if (CTL_FL(cond)) {
+            if (VALTYPE(cond) != kErrSignal) {
+                return new_error(interp, "while: unexpected control flow.\n");
+            }
+            return cond;
+        }
         if (!TRUEP(cond)) return ret;
         iter = body;
         while (!NILP(iter)) {
             x = CAR(iter);
             ret = EVAL(x);
-            if (ERRORP(ret)) return ret;
+            if (VALTYPE(ret) == kErrSignal || VALTYPE(ret) == kReturnSignal) {
+                return ret;
+            }
+            if (VALTYPE(ret) == kBreakSignal) {
+                return REF(ret)->ret;
+            }
+            if (VALTYPE(ret) == kContinueSignal) {
+                goto nextloop;
+            }
             iter = CDR(iter);
         }
     }
@@ -153,7 +175,7 @@ error:
     return new_error(interp, "while: syntax error.\n");
 }
 
-SExpRef primitive_lambda(Interp *interp, SExpRef args) {
+SExpRef primitive_lambda(Interp *interp, SExpRef args, bool istail) {
     SExpRef env, param, body;
 
     if (LENGTH(args) < 2) goto error;
@@ -165,7 +187,7 @@ error:
     return new_error(interp, "lambda: syntax error.\n");
 }
 
-SExpRef primitive_defun(Interp *interp, SExpRef args) {
+SExpRef primitive_defun(Interp *interp, SExpRef args, bool istail) {
     SExpRef name, param, body, function;
 
     if (LENGTH(args) < 3) goto error;
@@ -182,7 +204,7 @@ SExpRef primitive_defun(Interp *interp, SExpRef args) {
 error:
     return new_error(interp, "defun: syntax error.\n");
 }
-SExpRef primitive_defmacro(Interp *interp, SExpRef args) {
+SExpRef primitive_defmacro(Interp *interp, SExpRef args, bool istail) {
     SExpRef param, name, body, macro;
 
     if (LENGTH(args) < 3) goto error;
@@ -200,7 +222,7 @@ error:
     return new_error(interp, "defmacro: syntax error.\n");
 }
 
-SExpRef primitive_defvar(Interp *interp, SExpRef args) {
+SExpRef primitive_defvar(Interp *interp, SExpRef args, bool istail) {
     SExpRef name, exp, val;
 
     if (LENGTH(args) != 2) goto error;
@@ -211,14 +233,14 @@ SExpRef primitive_defvar(Interp *interp, SExpRef args) {
     if (VALTYPE(name) != kSymbolSExp) goto error;
     exp = CADR(args);
     val = EVAL(exp);
-    if (ERRORP(val)) return val;
+    if (CTL_FL(val)) return val;
     lisp_defvar(interp, REF(name)->str, val);
     return name;
 error:
     return new_error(interp, "defvar: syntax error.\n");
 }
 
-SExpRef primitive_function(Interp *interp, SExpRef args) {
+SExpRef primitive_function(Interp *interp, SExpRef args, bool istail) {
     if (LENGTH(args) != 1) goto error;
     if (VALTYPE(CAR(args)) != kSymbolSExp) goto error;
     return lisp_lookup_func(interp, REF(CAR(args))->str);
@@ -255,21 +277,21 @@ static SExpRef build_function_env(Interp *interp, SExpRef func, SExpRef args) {
     return env;
 }
 
-SExpRef primitive_funcall(Interp *interp, SExpRef args) {
+SExpRef primitive_funcall(Interp *interp, SExpRef args, bool istail) {
     if (LENGTH(args) < 1) goto error;
     args = lisp_eval_args(interp, args);
-    if (ERRORP(args)) return args;
-    return lisp_apply(interp, CAR(args), CDR(args));
+    if (CTL_FL(args)) return args;
+    return lisp_apply(interp, CAR(args), CDR(args), istail);
 error:
     return new_error(interp, "funcall: syntax error.\n");
 }
 
-SExpRef primitive_quote(Interp *interp, SExpRef args) {
+SExpRef primitive_quote(Interp *interp, SExpRef args, bool istail) {
     if (LENGTH(args) != 1) return new_error(interp, "quote: syntax error.\n");
     return CAR(args);
 }
 
-SExpRef primitive_macroexpand1(Interp *interp, SExpRef args) {
+SExpRef primitive_macroexpand1(Interp *interp, SExpRef args, bool istail) {
     SExpRef macro;
 
     if (LENGTH(args) != 1) goto error;
@@ -282,15 +304,15 @@ error:
     return new_error(interp, "macroexpand-1: syntax error.\n");
 }
 
-SExpRef primitive_apply(Interp *interp, SExpRef args) {
+SExpRef primitive_apply(Interp *interp, SExpRef args, bool istail) {
     SExpRef ret;
 
     if (LENGTH(args) != 2) goto error;
     args = lisp_eval_args(interp, args);
-    if (ERRORP(args)) return args;
+    if (CTL_FL(args)) return args;
     if (!lisp_check_list(interp, CADR(args))) goto error;
     PUSH_REG(args);
-    ret = lisp_apply(interp, CAR(args), CADR(args));
+    ret = lisp_apply(interp, CAR(args), CADR(args), istail);
     POP_REG();
     return ret;
 error:
@@ -315,7 +337,7 @@ static SExpRef quasi_impl(Interp *interp, SExpRef obj, bool *slicing) {
     if (VALTYPE(CAR(obj)) == kSymbolSExp
             && strcmp("slicing-unquote", REF(CAR(obj))->str) == 0) {
         lst = EVAL(CADR(obj));
-        if (ERRORP(lst)) return lst;
+        if (CTL_FL(lst)) return lst;
         if (LENGTH(obj) != 2) {
             return new_error(interp, "slicing-unquote: syntax error.\n");
         }
@@ -337,7 +359,7 @@ static SExpRef quasi_on_list(Interp *interp, SExpRef lst) {
     while (!NILP(iter)) {
         x = CAR(iter);
         newx = quasi_impl(interp, x, &slicing);
-        if (ERRORP(newx)) return newx;
+        if (CTL_FL(newx)) return newx;
         if (slicing) {
             j = newx;
             while (!NILP(j)) {
@@ -353,7 +375,7 @@ static SExpRef quasi_on_list(Interp *interp, SExpRef lst) {
     return lisp_reverse(interp, newlst);
 }
 
-SExpRef primitive_quasi(Interp *interp, SExpRef args) {
+SExpRef primitive_quasi(Interp *interp, SExpRef args, bool istail) {
     SExpRef ret;
     if (LENGTH(args) != 1) return new_error(interp, "quasiquote: syntax error.\n");
     bool slicing;
@@ -362,25 +384,33 @@ SExpRef primitive_quasi(Interp *interp, SExpRef args) {
     return ret;
 }
 
-SExpRef primitive_and(Interp *interp, SExpRef args) {
+SExpRef primitive_and(Interp *interp, SExpRef args, bool istail) {
     SExpRef ret;
     SExpRef i = args;
     if (LENGTH(args) < 1) return new_error(interp, "and: syntax error.\n");
     while (!NILP(i)) {
-        ret = EVAL(CAR(i));
+        if (!NILP(CDR(i))) {
+            ret = EVAL(CAR(i));    
+        } else {
+            return lisp_eval(interp, CAR(i), istail);
+        }
         if (!TRUEP(ret)) return ret;
         i = CDR(i);
     }
     return ret;
 }
 
-SExpRef primitive_or(Interp *interp, SExpRef args) {
+SExpRef primitive_or(Interp *interp, SExpRef args, bool istail) {
     SExpRef ret;
     SExpRef i = args;
 
     if (LENGTH(args) < 1) return new_error(interp, "or: syntax error.\n");
     while (!NILP(i)) {
-        ret = EVAL(CAR(i));
+        if (!NILP(CDR(i))) {
+            ret = EVAL(CAR(i));    
+        } else {
+            return lisp_eval(interp, CAR(i), istail);
+        }
         if (TRUEP(ret)) return ret;
         i = CDR(i);
     }

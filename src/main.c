@@ -22,9 +22,15 @@ int main() {
             continue;
         }
 
-        res = lisp_eval(&interp, parse_result.val);
-        if (Interp_ref(&interp, res)->type == kErrSExp) {
+        res = lisp_eval(&interp, parse_result.val, false);
+        if (Interp_ref(&interp, res)->type == kErrSignal) {
             fprintf(stderr, "Eval error: %s", Interp_ref(&interp, res)->str);
+            continue;
+        }
+        if (Interp_ref(&interp, res)->type == kBreakSignal
+                || Interp_ref(&interp, res)->type == kContinueSignal
+                || Interp_ref(&interp, res)->type == kReturnSignal) {
+            fprintf(stderr, "Eval error: unexpected control flow signal.\n");
             continue;
         }
         lisp_print(&interp, res, stdout);

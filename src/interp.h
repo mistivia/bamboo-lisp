@@ -11,7 +11,7 @@
 struct interp;
 typedef struct interp Interp;
 
-typedef SExpRef (*LispPrimitive)(Interp *interp, SExpRef sexp);
+typedef SExpRef (*LispPrimitive)(Interp *interp, SExpRef sexp, bool istail);
 
 typedef struct {
     const char *name;
@@ -41,13 +41,23 @@ void Interp_gc(Interp *self, SExpRef tmp_root);
 void Interp_add_primitive(Interp *self, const char *name, LispPrimitive fn);
 void Interp_add_userfunc(Interp *self, const char *name, LispUserFunc fn);
 
-#define REF(_x) (Interp_ref(interp, (_x)))
+SExpRef Interp_eval_string(Interp *interp, const char * str);
+void Interp_load_file(Interp *interp, const char *filename);
+void Interp_eval_readline(Interp *interp);
+
+#define REF(_x) (&(interp->objs.buffer)[(_x).idx])
 #define CONS(_x, _y) (lisp_cons(interp, (_x), (_y)))
 #define NILP(_x) (lisp_nilp(interp, (_x)))
 #define LENGTH(_x) (lisp_length(interp, (_x)))
-#define EVAL(_x) (lisp_eval(interp, (_x)))
+#define EVAL(_x) (lisp_eval(interp, (_x), false))
+#define EVALTAIL(_x) (lisp_eval(interp, (_x), true))
 #define TRUEP(_x) (lisp_truep(interp, (_x)))
-#define ERRORP(_x) (REF((_x))->type == kErrSExp)
+// control flow
+#define CTL_FL(_x) \
+    (REF((_x))->type == kErrSignal \
+    || REF((_x))->type == kReturnSignal \
+    || REF((_x))->type == kBreakSignal \
+    || REF((_x))->type == kContinueSignal)
 #define VALTYPE(_x) (REF((_x))->type)
 #define NIL (interp->nil)
 #define CAR(_x) (lisp_car(interp, (_x)))
@@ -70,7 +80,7 @@ void lisp_defvar(Interp *interp, const char *name, SExpRef val);
 void lisp_print(Interp *interp, SExpRef obj, FILE *fp);
 SExpRef lisp_lookup(Interp *interp, const char *name);
 SExpRef lisp_lookup_func(Interp *interp, const char *name);
-SExpRef lisp_apply(Interp *interp, SExpRef fn, SExpRef args);
+SExpRef lisp_apply(Interp *interp, SExpRef fn, SExpRef args, bool istail);
 SExpRef lisp_cons(Interp *interp, SExpRef a, SExpRef b);
 SExpRef lisp_dup(Interp *interp, SExpRef arg);
 bool lisp_nilp(Interp *interp, SExpRef arg);
@@ -80,7 +90,7 @@ SExpRef lisp_setq(Interp *interp, const char *name, SExpRef val);
 int lisp_length(Interp *interp, SExpRef lst);
 SExpRef lisp_car(Interp *interp, SExpRef arg);
 SExpRef lisp_cdr(Interp *interp, SExpRef arg);
-SExpRef lisp_eval(Interp *interp, SExpRef arg);
+SExpRef lisp_eval(Interp *interp, SExpRef arg, bool istail);
 SExpRef lisp_eval_args(Interp *interp, SExpRef args);
 SExpRef lisp_add(Interp *interp, SExpRef args);
 SExpRef lisp_sub(Interp *interp, SExpRef args);
@@ -100,6 +110,7 @@ SExpRef new_binding(Interp *ctx, SExpRef name, SExpRef val);
 SExpRef new_userfunc(Interp *interp, LispUserFunc val);
 SExpRef new_lambda(Interp *interp, SExpRef param, SExpRef body, SExpRef env);
 SExpRef new_macro(Interp *interp, SExpRef param, SExpRef body);
+SExpRef new_tailcall(Interp *interp, SExpRef fn, SExpRef args);
 SExpRef new_list1(Interp *ctx, SExpRef e1);
 SExpRef new_list2(Interp *ctx, SExpRef e1, SExpRef e2);
 SExpRef new_list3(Interp *ctx, SExpRef e1, SExpRef e2, SExpRef e3);

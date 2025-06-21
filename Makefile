@@ -19,6 +19,9 @@ tests_bin=$(tests:.c=.bin)
 
 all: bamboo-lisp
 
+src/prelude.c: src/prelude.lisp
+	cat src/prelude.lisp | python scripts/genprelude.py > src/prelude.c
+
 bamboo-lisp:  $(obj) src/main.c 3rdparty/algds/build/lib/libalgds.a
 	gcc $(cflags) -o $@ $^ $(ldflags)
 

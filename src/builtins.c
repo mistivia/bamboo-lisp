@@ -10,7 +10,7 @@ SExpRef builtin_car(Interp *interp, SExpRef args) {
     if (LENGTH(args) != 1) {
         return new_error(interp, "car: wrong argument number.\n");
     }
-    if (ERRORP(args)) return args;
+    if (CTL_FL(args)) return args;
     return CAR(CAR(args));
 }
 

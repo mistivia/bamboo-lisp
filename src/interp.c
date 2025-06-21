@@ -74,7 +74,6 @@ void Interp_init(Interp *self) {
     Interp_add_primitive(self, "and", primitive_and);
     Interp_add_primitive(self, "or", primitive_or);
 
-    Interp_add_userfunc(self, "eval", lisp_eval);
     Interp_add_userfunc(self, "show", builtin_show);
     Interp_add_userfunc(self, "car", builtin_car);
     Interp_add_userfunc(self, "list", builtin_list);
@@ -272,8 +271,14 @@ void lisp_to_string_impl(str_builder_t *sb, Int2IntHashTable *visited, Interp *i
         str_builder_append(sb, "<BINDING>");
     } else if (pe->type == kNilSExp) {
         str_builder_append(sb, "()");
-    } else if (pe->type == kErrSExp) {
+    } else if (pe->type == kErrSignal) {
         str_builder_append(sb, "<ERROR>");
+    } else if (pe->type == kReturnSignal) {
+        str_builder_append(sb, "<RETURN>");
+    } else if (pe->type == kBreakSignal) {
+        str_builder_append(sb, "<BREAK>");
+    } else if (pe->type == kContinueSignal) {
+        str_builder_append(sb, "<CONTINUE>");
     } else if (pe->type == kPairSExp) {
         if (Int2IntHashTable_find(visited, val.idx) != NULL) {
             str_builder_append(sb, "<%d>", val.idx);
@@ -315,7 +320,7 @@ const char* lisp_to_string(Interp *interp, SExpRef val) {
 SExpRef lisp_macroexpand1(Interp *interp, SExpRef macro, SExpRef args) {
     SExpRef fn = new_lambda(interp, REF(macro)->macro.args, REF(macro)->macro.body, interp->top_level);
     PUSH_REG(fn);
-    SExpRef ret = lisp_apply(interp, fn, args);
+    SExpRef ret = lisp_apply(interp, fn, args, false);
     POP_REG();
     return ret;
 error:
@@ -434,7 +439,7 @@ SExpRef lisp_eval_args(Interp *interp, SExpRef args) {
         PUSH_REG(ret);
         evalres = EVAL(CAR(cur));
         POP_REG();
-        if (ERRORP(evalres)) {
+        if (CTL_FL(evalres)) {
             ret = evalres;
             goto end;
         }
@@ -489,35 +494,44 @@ static SExpRef build_function_env(Interp *interp, SExpRef func, SExpRef args) {
     return env;
 }
 
-SExpRef lisp_apply(Interp *interp, SExpRef fn, SExpRef args) {
+SExpRef lisp_apply(Interp *interp, SExpRef fn, SExpRef args, bool istail) {
     SExpRef exp, env, ret, iter;
-
+    if (istail) return new_tailcall(interp, fn, args);
     if (VALTYPE(fn) == kFuncSExp) {
         env = build_function_env(interp, fn, args);
-        if (ERRORP(env)) return env;
+        if (CTL_FL(env)) return env;
         interp->stack = CONS(env, interp->stack);
         iter = REF(fn)->func.body;
         while (!NILP(iter)) {
             exp = CAR(iter);
-            ret = EVAL(exp);
-            if (ERRORP(exp)) goto end;
+            if (NILP(CDR(iter))) {
+                ret = lisp_eval(interp, exp, true);
+                goto end;
+            } else {
+                ret = EVAL(exp);
+            }
+            if (CTL_FL(exp)) goto end;
             iter = CDR(iter);
         }
-        end:
-            interp->stack = CDR(interp->stack);
-            return ret;
     } else if (VALTYPE(fn) == kUserFuncSExp) {
         LispUserFunc fnptr = REF(fn)->userfunc;
         ret = (*fnptr)(interp, args);
         return ret;
     }
+end:
+    if (VALTYPE(ret) == kBreakSignal || VALTYPE(ret) == kContinueSignal) {
+        ret = new_error(interp, "function call: unexpected control flow signal.\n");
+    }
+    if (VALTYPE(ret) == kReturnSignal) {
+        ret = REF(ret)->ret;
+    }
+    interp->stack = CDR(interp->stack);
+    return ret;
 error:
     return new_error(interp, "function call: syntax error.\n");
 }
 
-
-
-SExpRef lisp_eval(Interp *interp, SExpRef sexp) {
+SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
     SExpRef ret;
     SExpType type;
     PUSH_REG(sexp);
@@ -530,7 +544,10 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp) {
             || type == kStringSExp
             || type == kBooleanSExp
             || type == kCharSExp
-            || type == kErrSExp
+            || type == kErrSignal
+            || type == kBreakSignal
+            || type == kContinueSignal
+            || type == kReturnSignal
             || type == kFuncSExp
             || type == kUserFuncSExp
             || type == kRealSExp) {
@@ -555,27 +572,35 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp) {
             if (strcmp(symbol, PrimitiveEntryVector_ref(&interp->primitives, i)->name) == 0) {
                 LispPrimitive primitive_fn =
                     PrimitiveEntryVector_ref(&interp->primitives, i)->fn;
-                ret = (*primitive_fn)(interp, CDR(sexp));
+                ret = (*primitive_fn)(interp, CDR(sexp), istail);
                 goto end;
             }
         }
         SExpRef fn = lisp_lookup_func(interp, symbol);
-        if (ERRORP(fn)) {
+        if (CTL_FL(fn)) {
             ret = new_error(interp, "eval: \"%s\" is not a primitive, function, or macro.\n", symbol);
             goto end;
         }
         if (VALTYPE(fn) == kFuncSExp || VALTYPE(fn) == kUserFuncSExp) {
             SExpRef args = CDR(sexp);
-            SExpRef funcallargs = CONS(fn, args);
+            SExpRef funcallargs;
+        tailcall:
+            funcallargs = CONS(fn, args);
             PUSH_REG(funcallargs);
-            ret = primitive_funcall(interp, funcallargs);
+            ret = primitive_funcall(interp, funcallargs, istail);
             POP_REG();
+            if (VALTYPE(ret) == kTailcallSExp) {
+                fn = REF(ret)->tailcall.fn;
+                args = REF(ret)->tailcall.args;
+                istail = false;
+                goto tailcall;
+            }
             goto end;
         } else if (VALTYPE(fn) == kMacroSExp) {
             SExpRef args = CDR(sexp);
             SExpRef newast = lisp_macroexpand1(interp, fn, args);
             PUSH_REG(newast);
-            ret = EVAL(newast);
+            ret = lisp_eval(interp, newast, istail);
             POP_REG();
             goto end;
         }
@@ -605,6 +630,14 @@ SExpRef new_env(Interp *interp) {
     REF(ret)->type = kEnvSExp;
     REF(ret)->env.parent = NIL;
     REF(ret)->env.bindings = NIL;
+    return ret;
+}
+
+SExpRef new_tailcall(Interp *interp, SExpRef fn, SExpRef args) {
+    SExpRef ret = new_sexp(interp);
+    REF(ret)->type = kTailcallSExp;
+    REF(ret)->tailcall.fn = fn;
+    REF(ret)->tailcall.args= args;
     return ret;
 }
 
@@ -644,7 +677,7 @@ SExpRef new_error(Interp *interp, const char *format, ...) {
     vsnprintf(interp->errmsg_buf, BUFSIZE, format, args);
     va_end(args);
     SExpRef ret = new_sexp(interp);
-    REF(ret)->type = kErrSExp;
+    REF(ret)->type = kErrSignal;
     REF(ret)->str = interp->errmsg_buf;
     return ret;
 }

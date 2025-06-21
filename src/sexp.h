@@ -45,6 +45,11 @@ typedef struct {
     SExpRef next;
 } SExpBinding;
 
+typedef struct {
+    SExpRef fn;
+    SExpRef args;
+} SExpTailcall;
+
 typedef enum {
     kEmptySExp,
     kIntegerSExp,
@@ -61,7 +66,11 @@ typedef enum {
     kEnvSExp,
     kBindingSExp,
     kMacroSExp,
-    kErrSExp,
+    kErrSignal,
+    kReturnSignal,
+    kBreakSignal,
+    kContinueSignal,
+    kTailcallSExp,
 } SExpType;
 
 struct sexp {
@@ -80,6 +89,8 @@ struct sexp {
         SExpEnv env;
         SExpBinding binding;
         SExpMacro macro;
+        SExpRef ret;
+        SExpTailcall tailcall;
     };
 };
 
