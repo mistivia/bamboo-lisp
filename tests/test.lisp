@@ -5,6 +5,9 @@
     (princ (format "[PASS] %s\n" ,name))))
 
 (test-module "arithmetic")
+(test-module "error")
+(test-module "logic")
+(test-module "tailcall")
 (test-module "control-flow")
 (test-module "lambda")
 (test-module "comment")

@@ -1,0 +1,10 @@
+(assert-error (error ""))
+(assert-error (let () (error "") #t))
+(assert-error (if (error "") #t #t))
+(assert-error (and (error "")))
+(assert-error (or (error "")))
+(assert-error (funcall (lambda () (error ""))))
+(assert-error (while #t (error "")))
+(assert-error (cond (#t (error ""))))
+(assert-error (cond ((error "") #t)))
+

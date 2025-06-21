@@ -674,7 +674,7 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
                 LispPrimitive primitive_fn =
                     PrimitiveEntryVector_ref(&interp->primitives, i)->fn;
                 ret = (*primitive_fn)(interp, CDR(sexp), istail);
-                if (VALTYPE(ret) == kTailcallSExp) {
+                if (VALTYPE(ret) == kTailcallSExp && !istail) {
                     fn = REF(ret)->tailcall.fn;
                     args = REF(ret)->tailcall.args;
                     goto tailcall;
@@ -693,7 +693,7 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
             PUSH_REG(funcallargs);
             ret = primitive_funcall(interp, funcallargs, istail);
             POP_REG();
-            if (VALTYPE(ret) == kTailcallSExp) {
+            if (VALTYPE(ret) == kTailcallSExp && !istail) {
                 fn = REF(ret)->tailcall.fn;
                 args = REF(ret)->tailcall.args;
                 goto tailcall;
