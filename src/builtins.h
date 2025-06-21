@@ -3,6 +3,9 @@
 
 #include "interp.h"
 
+SExpRef builtin_format(Interp *interp, SExpRef sexp);
+SExpRef builtin_concat(Interp *interp, SExpRef sexp);
+SExpRef builtin_print(Interp *interp, SExpRef sexp);
 SExpRef builtin_exit(Interp *interp, SExpRef sexp);
 SExpRef builtin_error(Interp *interp, SExpRef sexp);
 SExpRef builtin_list(Interp *interp, SExpRef sexp);
@@ -22,7 +25,7 @@ SExpRef builtin_gt(Interp *interp, SExpRef sexp);
 SExpRef builtin_lt(Interp *interp, SExpRef sexp);
 SExpRef builtin_ge(Interp *interp, SExpRef sexp);
 SExpRef builtin_le(Interp *interp, SExpRef sexp);
-SExpRef builtin_show(Interp *interp, SExpRef sexp);
+SExpRef builtin_princ(Interp *interp, SExpRef sexp);
 SExpRef builtin_gcstat(Interp *interp, SExpRef sexp);
 
 #endif

@@ -14,13 +14,16 @@ SExpRef primitive_load(Interp *interp, SExpRef args, bool istail) {
         return new_error(interp, "load: load can only be in top level.\n");
     }
     if (LENGTH(args) != 1) return new_error(interp, "load: syntax error.\n");
+    args = lisp_eval_args(interp, args);
     if (VALTYPE(CAR(args)) != kStringSExp) return new_error(interp, "load: syntax error.\n");
     Parser *old_parser = interp->parser;
     Parser *new_parser = malloc(sizeof(Parser));
     Parser_init(new_parser);
     new_parser->ctx = interp;
     interp->parser = new_parser;
+    PUSH_REG(args);
     SExpRef ret = Interp_load_file(interp, REF(CAR(args))->str);
+    POP_REG();
     Parser_free(new_parser);
     free(new_parser);
     interp->parser = old_parser;
@@ -354,7 +357,10 @@ SExpRef primitive_funcall(Interp *interp, SExpRef args, bool istail) {
     if (LENGTH(args) < 1) goto error;
     args = lisp_eval_args(interp, args);
     if (CTL_FL(args)) return args;
-    return lisp_apply(interp, CAR(args), CDR(args), istail);
+    PUSH_REG(args);
+    SExpRef ret = lisp_apply(interp, CAR(args), CDR(args), istail);
+    POP_REG();
+    return ret;
 error:
     return new_error(interp, "funcall: syntax error.\n");
 }

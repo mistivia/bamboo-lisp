@@ -86,8 +86,11 @@ void Interp_init(Interp *self) {
     Interp_add_primitive(self, "assert-error", primitive_assert_error);
     Interp_add_primitive(self, "load", primitive_load);
 
+    Interp_add_userfunc(self, "format", builtin_format);
+    Interp_add_userfunc(self, "concat", builtin_concat);
     Interp_add_userfunc(self, "error", builtin_error);
-    Interp_add_userfunc(self, "show", builtin_show);
+    Interp_add_userfunc(self, "print", builtin_print);
+    Interp_add_userfunc(self, "princ", builtin_princ);
     Interp_add_userfunc(self, "car", builtin_car);
     Interp_add_userfunc(self, "list", builtin_list);
     Interp_add_userfunc(self, "cdr", builtin_cdr);
@@ -603,7 +606,7 @@ SExpRef lisp_apply(Interp *interp, SExpRef fn, SExpRef args, bool istail) {
             } else {
                 ret = EVAL(exp);
             }
-            if (CTL_FL(exp)) goto end;
+            if (CTL_FL(ret)) goto end;
             iter = CDR(iter);
         }
     } else if (VALTYPE(fn) == kUserFuncSExp) {

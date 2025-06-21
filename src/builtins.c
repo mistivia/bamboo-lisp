@@ -1,6 +1,86 @@
 #include "builtins.h"
 #include "interp.h"
 #include "sexp.h"
+#include <algds/str.h>
+
+SExpRef builtin_format(Interp *interp, SExpRef args) {
+    if (NILP(args)) {
+        return new_error(interp, "format: too few arguments (missing format string).\n");
+    }
+
+    SExpRef format_string_sexp = CAR(args);
+    SExpRef format_args = CDR(args);
+
+    if (REF(format_string_sexp)->type != kStringSExp) {
+        return new_error(interp, "format: first argument must be a string.\n");
+    }
+
+    const char *format_str = REF(format_string_sexp)->str;
+    str_builder_t sb;
+    SExpRef ret;
+    init_str_builder(&sb);
+
+    SExpRef current_format_arg = format_args;
+    for (int i = 0; format_str[i] != '\0'; ++i) {
+        if (format_str[i] == '%' && format_str[i+1] == 's') {
+            if (NILP(current_format_arg)) {
+                ret = new_error(interp, "format: wrong argument number.\n");
+                goto end;
+            } else {
+                SExpRef s_arg = CAR(current_format_arg);
+                if (REF(s_arg)->type != kStringSExp) {
+                    const char *s = lisp_to_string(interp, s_arg);
+                    str_builder_append(&sb, "%s", s);
+                    free((void*)s);
+                } else {
+                    str_builder_append(&sb, "%s", REF(s_arg)->str);
+                }
+                current_format_arg = CDR(current_format_arg);
+                i++;
+            }
+        } else if (format_str[i] == '%' && format_str[i+1] == '%') {
+            str_builder_append_char(&sb, '%');
+            i++;
+        } else if (format_str[i] == '%') {
+            ret = new_error(interp, "format: only %%s is supported.\n");
+            goto end;
+        } else {
+            str_builder_append_char(&sb, format_str[i]);
+        }
+    }
+    if (!NILP(current_format_arg)) {
+        ret = new_error(interp, "format: wrong argument number.\n");
+        goto end;
+    }
+
+    str_builder_append_char(&sb, '\0');
+    ret = new_string(interp, sb.buf);
+end:
+    free(sb.buf);
+    return ret;
+}
+
+SExpRef builtin_concat(Interp *interp, SExpRef args) {
+    SExpRef cur = args;
+    while (!NILP(cur)) {
+        if (REF(CAR(cur))->type != kStringSExp) {
+            return new_error(interp, "concat: wrong type.\n");
+        }
+        cur = CDR(cur);
+    }
+    str_builder_t sb;
+    init_str_builder(&sb);
+    cur = args;
+    while (!NILP(cur)) {
+        SExpRef s = CAR(cur);
+        str_builder_append(&sb, "%s", REF(s)->str);
+        cur = CDR(cur);
+    }
+    str_builder_append_char(&sb, '\0');
+    SExpRef ret = new_string(interp, sb.buf);
+    free(sb.buf);
+    return ret;
+}
 
 SExpRef builtin_exit(Interp *interp, SExpRef args) {
     if (LENGTH(args) == 0) {
@@ -41,7 +121,21 @@ SExpRef builtin_car(Interp *interp, SExpRef args) {
     return CAR(CAR(args));
 }
 
-SExpRef builtin_show(Interp *interp, SExpRef args) {
+SExpRef builtin_princ(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) {
+        return new_error(interp, "show wrong argument number.\n");
+    }
+    if (VALTYPE(CAR(args)) == kStringSExp) {
+        printf("%s", REF(CAR(args))->str);
+        return NIL;
+    }
+    const char *s = lisp_to_string(interp, CAR(args));
+    printf("%s", s);
+    free((void*)s);
+    return NIL;
+}
+
+SExpRef builtin_print(Interp *interp, SExpRef args) {
     if (LENGTH(args) != 1) {
         return new_error(interp, "show wrong argument number.\n");
     }

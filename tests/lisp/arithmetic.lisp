@@ -9,3 +9,4 @@
 (assert-error (- 1 "a"))
 (assert-error (* 1 "a"))
 (assert-error (/ 1 "a"))
+

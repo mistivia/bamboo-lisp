@@ -1,5 +1,7 @@
 (assert-error (if (error "") 1 2))
 
+(defmacro inmacro x (progn ,@x))
+
 (let ((i 0))
   (while #t
     (if (> i 4)
@@ -28,6 +30,7 @@
 (assert-error (funcall (lambda () (break))))
 (assert-error (funcall (lambda () (continue))))
 (assert (= 1 (funcall (lambda () (return 1)))))
+(assert (= 1 (funcall (lambda () (inmacro (return 1) (return 2))))))
 (assert (= 1 (funcall (lambda () (while #t (return 1))))))
 (assert (= 1 (funcall (lambda () (let () (return 1))))))
 (assert (= 1 (funcall (lambda () (let ((x (return 1))) (return 2))))))

@@ -1,8 +1,14 @@
-(load "arithmetic.lisp")
-(load "control-flow.lisp")
-(load "lambda.lisp")
-(load "comment.lisp")
-(load "macro.lisp")
-(load "let-binding.lisp")
+(defmacro test-module (name)
+  `(progn
+    (princ (format "[TEST] %s\n" ,name))
+    (load (format "%s.lisp" ,name))
+    (princ (format "[PASS] %s\n" ,name))))
+
+(test-module "arithmetic")
+(test-module "control-flow")
+(test-module "lambda")
+(test-module "comment")
+(test-module "macro")
+(test-module "let-binding")
 
 (exit)
