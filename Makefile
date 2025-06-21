@@ -29,13 +29,13 @@ bamboo-lisp:  $(obj) src/main.c 3rdparty/algds/build/lib/libalgds.a
 	cd 3rdparty/algds && \
 		make profile=$(mode)
 
-test: $(tests_bin)
+test: bamboo-lisp $(tests_bin)
 	@echo
 	@echo "Run tests:"
-	@scripts/runall.sh $^
+	@scripts/runall.sh $(tests_bin)
 	@echo "Run scripts:"
-	cd tests/lisp && \
-		../../bamboo-lisp test.lisp
+	cd tests/ && \
+		../bamboo-lisp test.lisp
 
 
 $(obj):%.o:%.c
