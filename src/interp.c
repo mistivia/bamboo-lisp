@@ -356,6 +356,8 @@ void lisp_to_string_impl(str_builder_t *sb, Int2IntHashTable *visited, Interp *i
         str_builder_append(sb, "<BREAK>");
     } else if (pe->type == kContinueSignal) {
         str_builder_append(sb, "<CONTINUE>");
+    } else if (pe->type == kTailcallSExp) {
+        str_builder_append(sb, "<TAILCALL>");
     } else if (pe->type == kPairSExp) {
         if (Int2IntHashTable_find(visited, val.idx) != NULL) {
             str_builder_append(sb, "<%d>", val.idx);
@@ -572,6 +574,9 @@ static SExpRef build_function_env(Interp *interp, SExpRef func, SExpRef args) {
 }
 
 SExpRef lisp_apply(Interp *interp, SExpRef fn, SExpRef args, bool istail) {
+    // const char *sexp_str = lisp_to_string(interp, args);
+    // fprintf(stderr, "DEBUG: apply: %s, istail: %d\n", sexp_str, istail);
+    // free((void*)sexp_str);
     SExpRef exp, env, ret, iter;
     if (istail) return new_tailcall(interp, fn, args);
     if (VALTYPE(fn) == kFuncSExp) {
@@ -609,6 +614,9 @@ error:
 }
 
 SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
+    // const char *sexp_str = lisp_to_string(interp, sexp);
+    // fprintf(stderr, "DEBUG: eval: %s, istail: %d\n", sexp_str, istail);
+    // free((void*)sexp_str);
     SExpRef ret;
     SExpType type;
     PUSH_REG(sexp);
@@ -636,6 +644,7 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
         ret = lisp_lookup(interp, REF(sexp)->str);
         goto end;
     }
+    SExpRef fn, funcallargs, args;
     if (type == kPairSExp) {
         if (!lisp_check_list(interp, sexp)) {
             ret = new_error(interp, "eval: list not proper.\n");
@@ -651,18 +660,21 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
                 LispPrimitive primitive_fn =
                     PrimitiveEntryVector_ref(&interp->primitives, i)->fn;
                 ret = (*primitive_fn)(interp, CDR(sexp), istail);
+                if (VALTYPE(ret) == kTailcallSExp) {
+                    fn = REF(ret)->tailcall.fn;
+                    args = REF(ret)->tailcall.args;
+                    goto tailcall;
+                }
                 goto end;
             }
         }
-        SExpRef fn = lisp_lookup_func(interp, symbol);
+        fn = lisp_lookup_func(interp, symbol);
         if (CTL_FL(fn)) {
             ret = new_error(interp, "eval: \"%s\" is not a primitive, function, or macro.\n", symbol);
             goto end;
         }
         if (VALTYPE(fn) == kFuncSExp || VALTYPE(fn) == kUserFuncSExp) {
-            SExpRef args = CDR(sexp);
-            SExpRef funcallargs;
-        tailcall:
+            args = CDR(sexp);
             funcallargs = CONS(fn, args);
             PUSH_REG(funcallargs);
             ret = primitive_funcall(interp, funcallargs, istail);
@@ -670,7 +682,6 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
             if (VALTYPE(ret) == kTailcallSExp) {
                 fn = REF(ret)->tailcall.fn;
                 args = REF(ret)->tailcall.args;
-                istail = false;
                 goto tailcall;
             }
             goto end;
@@ -688,6 +699,14 @@ end:
     POP_REG();
     Interp_gc(interp, ret);
     return ret;
+tailcall:
+    while (1) {
+        ret = lisp_apply(interp, fn, args, false);
+        if (VALTYPE(ret) != kTailcallSExp) break;
+        fn = REF(ret)->tailcall.fn;
+        args = REF(ret)->tailcall.args;
+    }
+    goto end;
 }
 
 SExpRef new_sexp(Interp *interp) {
