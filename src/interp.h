@@ -14,18 +14,16 @@ typedef struct parser Parser;
 struct interp;
 typedef struct interp Interp;
 
-typedef SExpRef (*LispPrimitive)(Interp *interp, SExpRef sexp, bool istail);
-
 typedef struct {
-    const char *name;
-    LispPrimitive fn;
-} PrimitiveEntry;
+    SExpRef name;
+    SExpRef binding;
+} TopBinding;
 
-VECTOR_DEF(PrimitiveEntry);
+VECTOR_DEF(TopBinding);
 
 struct interp {
     SExpVector objs;
-    PrimitiveEntryVector primitives;
+    TopBindingVector topbindings;
     IntVector empty_space;
     String2IntHashTable symbols;
     SExpRef stack;
@@ -79,18 +77,18 @@ SExpRef Interp_load_file(Interp *interp, const char *filename);
 const char* lisp_to_string(Interp *interp, SExpRef val);
 SExpRef lisp_macroexpand1(Interp *interp, SExpRef macro, SExpRef args);
 SExpRef lisp_reverse(Interp *interp, SExpRef lst);
-void lisp_defun(Interp *interp, const char *name, SExpRef val);
-void lisp_defvar(Interp *interp, const char *name, SExpRef val);
+void lisp_defun(Interp *interp, SExpRef name, SExpRef val);
+void lisp_defvar(Interp *interp, SExpRef name, SExpRef val);
 void lisp_print(Interp *interp, SExpRef obj, FILE *fp);
-SExpRef lisp_lookup(Interp *interp, const char *name);
-SExpRef lisp_lookup_func(Interp *interp, const char *name);
+SExpRef lisp_lookup(Interp *interp, SExpRef name);
+SExpRef lisp_lookup_func(Interp *interp, SExpRef name);
 SExpRef lisp_apply(Interp *interp, SExpRef fn, SExpRef args, bool istail);
 SExpRef lisp_cons(Interp *interp, SExpRef a, SExpRef b);
 SExpRef lisp_dup(Interp *interp, SExpRef arg);
 bool lisp_nilp(Interp *interp, SExpRef arg);
 bool lisp_truep(Interp *interp, SExpRef a);
 bool lisp_check_list(Interp *interp, SExpRef lst);
-SExpRef lisp_setq(Interp *interp, const char *name, SExpRef val);
+SExpRef lisp_setq(Interp *interp, SExpRef name, SExpRef val);
 int lisp_length(Interp *interp, SExpRef lst);
 SExpRef lisp_car(Interp *interp, SExpRef arg);
 SExpRef lisp_cdr(Interp *interp, SExpRef arg);
@@ -115,6 +113,7 @@ SExpRef new_symbol(Interp *ctx, const char *val);
 SExpRef new_env(Interp *ctx);
 SExpRef new_binding(Interp *ctx, SExpRef name, SExpRef val);
 SExpRef new_userfunc(Interp *interp, LispUserFunc val);
+SExpRef new_primitive(Interp *interp, LispPrimitive val);
 SExpRef new_lambda(Interp *interp, SExpRef param, SExpRef body, SExpRef env);
 SExpRef new_macro(Interp *interp, SExpRef param, SExpRef body);
 SExpRef new_tailcall(Interp *interp, SExpRef fn, SExpRef args);

@@ -5,3 +5,5 @@
 bamboo-lisp
 compile_commands.json
 .cache
+todo
+fibo.lisp

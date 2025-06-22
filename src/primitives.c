@@ -136,7 +136,7 @@ SExpRef primitive_setq(Interp *interp, SExpRef args, bool istail) {
     if (REF(name)->type != kSymbolSExp) goto error;
     value = EVAL(exp);
     if (CTL_FL(value)) return value;
-    return lisp_setq(interp, REF(name)->str, value);
+    return lisp_setq(interp, name, value);
 error:
     return new_error(interp, "setq: syntax error.\n");
 }
@@ -188,7 +188,7 @@ SExpRef primitive_let(Interp *interp, SExpRef args, bool istail) {
             ret = val;
             goto end;
         }
-        ret = lisp_setq(interp, REF(CAR(x))->str, val);
+        ret = lisp_setq(interp, CAR(x), val);
         if (CTL_FL(ret)) goto end;
         iter = CDR(iter);
     }
@@ -275,7 +275,7 @@ SExpRef primitive_defun(Interp *interp, SExpRef args, bool istail) {
     param = CADR(args);
     body = CDDR(args);
     function = new_lambda(interp, param, body, interp->top_level);
-    lisp_defun(interp, REF(name)->str, function);
+    lisp_defun(interp, name, function);
     return name;
 error:
     return new_error(interp, "defun: syntax error.\n");
@@ -292,7 +292,7 @@ SExpRef primitive_defmacro(Interp *interp, SExpRef args, bool istail) {
     param = CADR(args);
     body = CDDR(args);
     macro = new_macro(interp, param, body);
-    lisp_defun(interp, REF(name)->str, macro);
+    lisp_defun(interp, name, macro);
     return name;
 error:
     return new_error(interp, "defmacro: syntax error.\n");
@@ -310,7 +310,7 @@ SExpRef primitive_defvar(Interp *interp, SExpRef args, bool istail) {
     exp = CADR(args);
     val = EVAL(exp);
     if (CTL_FL(val)) return val;
-    lisp_defvar(interp, REF(name)->str, val);
+    lisp_defvar(interp, name, val);
     return name;
 error:
     return new_error(interp, "defvar: syntax error.\n");
@@ -319,7 +319,7 @@ error:
 SExpRef primitive_function(Interp *interp, SExpRef args, bool istail) {
     if (LENGTH(args) != 1) goto error;
     if (VALTYPE(CAR(args)) != kSymbolSExp) goto error;
-    return lisp_lookup_func(interp, REF(CAR(args))->str);
+    return lisp_lookup_func(interp, CAR(args));
 error:
     return new_error(interp, "function: syntax error.\n");
 }
@@ -376,7 +376,7 @@ SExpRef primitive_macroexpand1(Interp *interp, SExpRef args, bool istail) {
     if (LENGTH(args) != 1) goto error;
     args = CAR(args);
     if (VALTYPE(CAR(args)) != kSymbolSExp) goto error;
-    macro = lisp_lookup_func(interp, REF(CAR(args))->str);
+    macro = lisp_lookup_func(interp, CAR(args));
     if (VALTYPE(macro) != kMacroSExp) goto error;
     return lisp_macroexpand1(interp, macro, CDR(args));
 error:
