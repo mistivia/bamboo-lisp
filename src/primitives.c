@@ -6,7 +6,11 @@
 SExpRef primitive_assert_error(Interp *interp, SExpRef args, bool istail) {
     SExpRef eargs = lisp_eval_args(interp, args);
     if (VALTYPE(eargs) == kErrSignal) return interp->t;
-    return new_error(interp, "assert-error failed: no error.\n");
+
+    const char *expstr = lisp_to_string(interp, CAR(args));
+    SExpRef ret = new_error(interp, "assert-error failed, no error: %s.\n", expstr);
+    free((void*)expstr);
+    return ret;
 }
 
 SExpRef primitive_load(Interp *interp, SExpRef args, bool istail) {
@@ -63,7 +67,7 @@ SExpRef primitive_assert(Interp *interp, SExpRef args, bool istail) {
     if (TRUEP(CAR(eargs))) {
         return interp->t;
     } else {
-        const char *expstr = lisp_to_string(interp, args);
+        const char *expstr = lisp_to_string(interp, CAR(args));
         SExpRef ret = new_error(interp, "Assertion failed: %s.\n", expstr);
         free((void*)expstr);
         return ret;
