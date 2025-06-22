@@ -566,6 +566,20 @@ SExpRef lisp_reverse(Interp *interp, SExpRef lst) {
     return ret;
 }
 
+SExpRef lisp_nreverse(Interp *interp, SExpRef lst) {
+    SExpRef prev = NIL;
+    SExpRef cur = lst;
+    SExpRef next_node;
+
+    while (!NILP(cur)) {
+        next_node = CDR(cur);
+        REF(cur)->pair.cdr = prev;
+        prev = cur;
+        cur = next_node;
+    }
+    return prev;
+}
+
 SExpRef lisp_eval_args(Interp *interp, SExpRef args) {
     SExpRef ret = interp->nil;
     SExpRef cur = args;
@@ -583,7 +597,7 @@ SExpRef lisp_eval_args(Interp *interp, SExpRef args) {
         ret = CONS(evalres, ret);
         cur = CDR(cur);
     }
-    ret = lisp_reverse(interp, ret);
+    ret = lisp_nreverse(interp, ret);
 end:
     Interp_gc(interp, ret);
     return ret;
