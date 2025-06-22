@@ -242,7 +242,9 @@ void Interp_add_primitive(Interp *self, const char *name, LispPrimitive fn) {
 }
 
 void Interp_gc(Interp *interp, SExpRef tmproot) {
-    if (!IntVector_empty(&interp->empty_space)) {
+    int freesize = IntVector_len(&interp->empty_space);
+    int heapsize = SExpVector_len(&interp->objs);
+    if (freesize > heapsize >> 4) {
         return;
     }
     SExpRefVector gcstack;
@@ -297,12 +299,13 @@ void Interp_gc(Interp *interp, SExpRef tmproot) {
             continue;
         }
         if (obj->type == kSymbolSExp) continue;
+        if (obj->type == kEmptySExp) continue;
         if (obj->type == kStringSExp) free((void*)obj->str);
         obj->type = kEmptySExp;
         IntVector_push_back(&interp->empty_space, i);
     }
     // enlarge heap
-    int heapsize = SExpVector_len(&interp->objs);
+    heapsize = SExpVector_len(&interp->objs);
     int usedsize = heapsize - IntVector_len(&interp->empty_space);
     if (heapsize < usedsize * 2) {
         SExp sexp;
