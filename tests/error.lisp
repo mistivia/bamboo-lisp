@@ -1,4 +1,5 @@
 (assert-error (error ""))
+(assert-error (let ((x (error ""))) #t))
 (assert-error (let () (error "") #t))
 (assert-error (if (error "") #t #t))
 (assert-error (and (error "")))

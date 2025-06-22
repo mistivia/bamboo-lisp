@@ -359,9 +359,13 @@ static SExpRef build_function_env(Interp *interp, SExpRef func, SExpRef args) {
 
 SExpRef primitive_funcall(Interp *interp, SExpRef args, bool istail) {
     if (LENGTH(args) < 1) goto error;
-    args = lisp_eval_args(interp, args);
-    if (CTL_FL(args)) return args;
-    SExpRef ret = lisp_apply(interp, CAR(args), CDR(args), istail);
+    SExpRef evaled = lisp_eval_args(interp, args);
+    if (CTL_FL(evaled)) return evaled;
+    SExpRef fn = CAR(evaled);
+    SExpRef fnargs = CDR(evaled);
+    PUSH_REG(fn);
+    SExpRef ret = lisp_apply(interp, fn, fnargs, istail);
+    POP_REG();
     return ret;
 error:
     return new_error(interp, "funcall: syntax error.\n");
@@ -392,7 +396,10 @@ SExpRef primitive_apply(Interp *interp, SExpRef args, bool istail) {
     args = lisp_eval_args(interp, args);
     if (CTL_FL(args)) return args;
     if (!lisp_check_list(interp, CADR(args))) goto error;
-    ret = lisp_apply(interp, CAR(args), CADR(args), istail);
+    SExpRef fn = CAR(args);
+    PUSH_REG(fn);
+    ret = lisp_apply(interp, fn, CADR(args), istail);
+    POP_REG();
     return ret;
 error:
     return new_error(interp, "apply: syntax error.\n");
