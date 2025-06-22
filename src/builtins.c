@@ -3,6 +3,44 @@
 #include "sexp.h"
 #include <algds/str.h>
 
+static bool equal_impl(Interp *interp, SExpRef x, SExpRef y) {
+    if (VALTYPE(x) != VALTYPE(y)) return false;
+    if (VALTYPE(x) == kIntegerSExp) {
+        return REF(x)->integer== REF(y)->integer;
+    } else if (VALTYPE(x) == kRealSExp) {
+        return REF(x)->real == REF(y)->real;
+    } else if (VALTYPE(x) == kStringSExp) {
+        return strcmp(REF(x)->str, REF(y)->str) == 0;
+    } else if (VALTYPE(x) == kPairSExp) {
+        return equal_impl(interp, REF(x)->pair.car, REF(y)->pair.car)
+                && equal_impl(interp, REF(x)->pair.cdr, REF(y)->pair.cdr);
+    } else if (VALTYPE(x) == kCharSExp) {
+        return REF(x)->character == REF(y)->character;
+    } else if (VALTYPE(x) == kUserDataSExp) {
+        return REF(x)->userdata == REF(y)->userdata;
+    }
+    return x.idx == y.idx;
+}
+
+SExpRef builtin_eq(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "eq: expect 2 args.\n");
+    SExpRef x = CAR(args), y = CADR(args);
+    if (VALTYPE(x) != VALTYPE(y)) return new_boolean(interp, false);
+    if (VALTYPE(x) == kIntegerSExp
+            || VALTYPE(x) == kCharSExp 
+            || VALTYPE(x) == kRealSExp) {
+        return new_boolean(interp, equal_impl(interp, x ,y));
+    }
+    return new_boolean(interp, x.idx == y.idx);
+}
+
+
+SExpRef builtin_equal(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "equal: expect 2 args.\n");
+    SExpRef x = CAR(args), y = CADR(args);
+    return new_boolean(interp, equal_impl(interp, x, y));
+}
+
 SExpRef builtin_format(Interp *interp, SExpRef args) {
     if (NILP(args)) {
         return new_error(interp, "format: too few arguments (missing format string).\n");
