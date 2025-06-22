@@ -77,6 +77,7 @@ SExpRef Interp_load_file(Interp *interp, const char *filename);
 
 const char* lisp_to_string(Interp *interp, SExpRef val);
 SExpRef lisp_macroexpand1(Interp *interp, SExpRef macro, SExpRef args);
+SExpRef lisp_nreverse(Interp *interp, SExpRef lst);
 SExpRef lisp_reverse(Interp *interp, SExpRef lst);
 void lisp_defun(Interp *interp, SExpRef name, SExpRef val);
 void lisp_defvar(Interp *interp, SExpRef name, SExpRef val);

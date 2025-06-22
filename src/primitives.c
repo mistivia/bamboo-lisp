@@ -453,7 +453,7 @@ static SExpRef quasi_on_list(Interp *interp, SExpRef lst) {
         iter = CDR(iter);
     }
 
-    return lisp_reverse(interp, newlst);
+    return lisp_nreverse(interp, newlst);
 }
 
 SExpRef primitive_quasi(Interp *interp, SExpRef args, bool istail) {
