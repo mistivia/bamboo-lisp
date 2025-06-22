@@ -6,6 +6,14 @@
 #include <float.h>
 #include <math.h>
 
+SExpRef builtin_alwaysgc(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "_alwaysgc: arg num error.\n");
+    SExpRef arg = CAR(args);
+    if (VALTYPE(arg) != kBooleanSExp) return new_error(interp, "alwaysgc: type error.\n");
+    interp->alwaysgc = REF(arg)->boolean;
+    return NIL;
+}
+
 SExpRef builtin_symbol2string(Interp *interp, SExpRef args) {
     if (LENGTH(args) != 1) return new_error(interp, "symbol->string: arg num error.\n");
     SExpRef arg = CAR(args);
@@ -600,6 +608,7 @@ SExpRef builtin_num_equal(Interp *interp, SExpRef args) {
         return new_boolean(interp, REF(lhs)->integer == REF(rhs)->integer);
     }
 }
+
 
 SExpRef builtin_num_neq(Interp *interp, SExpRef args) {
     int args_len = LENGTH(args);

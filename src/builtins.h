@@ -53,5 +53,6 @@ SExpRef builtin_ge(Interp *interp, SExpRef args);
 SExpRef builtin_le(Interp *interp, SExpRef args);
 SExpRef builtin_princ(Interp *interp, SExpRef args);
 SExpRef builtin_gcstat(Interp *interp, SExpRef args);
+SExpRef builtin_alwaysgc(Interp *interp, SExpRef args);
 
 #endif

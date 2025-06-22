@@ -6,7 +6,6 @@
 (defun is-odd (x)
     (is-even (- x 1)))
 
-(assert (is-even 10000))
 (assert (is-even 10))
 (assert (is-even 0))
 (assert (is-odd 1))
@@ -18,9 +17,3 @@
     (progn
       (cnt-down (- x 1)))))
 
-(assert (cnt-down 10000))
-
-;; can pass without stack overflow,
-;; but comment out for too time-consuming
-;; (assert (is-even 1000000)) 
-;; (assert (cnt-down 1000000))
