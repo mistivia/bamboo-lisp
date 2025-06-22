@@ -35,6 +35,7 @@ struct interp {
     char *errmsg_buf;
     Parser *parser;
     int gensym_cnt;
+    bool alwaysgc;
 };
 
 void Interp_init(Interp *self);

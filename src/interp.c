@@ -140,6 +140,7 @@ void Interp_init(Interp *self) {
 
 
     Interp_add_userfunc(self, "_gcstat", builtin_gcstat);
+    Interp_add_userfunc(self, "_alwaysgc", builtin_alwaysgc);
 
     SExpRef ret = Interp_eval_string(self, bamboo_lisp_prelude);
     Interp *interp = self;
@@ -249,7 +250,7 @@ void Interp_add_primitive(Interp *self, const char *name, LispPrimitive fn) {
 void Interp_gc(Interp *interp, SExpRef tmproot) {
     int freesize = IntVector_len(&interp->empty_space);
     int heapsize = SExpVector_len(&interp->objs);
-    if (freesize > heapsize >> 4) {
+    if (freesize > (heapsize >> 4) && !interp->alwaysgc) {
         return;
     }
     SExpRefVector gcstack;
