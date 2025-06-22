@@ -2,6 +2,88 @@
 #include "interp.h"
 #include "sexp.h"
 #include <algds/str.h>
+#include <stdint.h>
+#include <float.h>
+
+SExpRef builtin_min(Interp *interp, SExpRef args) {
+    if (LENGTH(args) < 1) return new_error(interp, "min: wrong arg number.\n");
+    bool hasReal = false;
+    FOREACH(iter, args) {
+        SExpRef x = CAR(iter);
+        if (VALTYPE(x) == kRealSExp) hasReal = true;
+        if (VALTYPE(x) != kRealSExp && VALTYPE(x) != kIntegerSExp) {
+            return new_error(interp, "min: wrong type.\n");
+        }
+    }
+    if (hasReal) {
+        double min = DBL_MAX;
+        FOREACH(iter, args) {
+            SExpRef x = CAR(iter);
+            if (VALTYPE(x) == kIntegerSExp) {
+                if (REF(x)->integer < min) {
+                    min = REF(x)->integer;
+                }
+            }
+            if (VALTYPE(x) == kRealSExp) {
+                if (REF(x)->real < min) {
+                    min = REF(x)->real;
+                }
+            }
+        }
+        return new_integer(interp, min);
+    } else {
+        int64_t min = INT64_MAX;
+        FOREACH(iter, args) {
+            SExpRef x = CAR(iter);
+            if (VALTYPE(x) == kIntegerSExp) {
+                if (REF(x)->integer < min) {
+                    min = REF(x)->integer;
+                }
+            }
+        }
+        return new_integer(interp, min);
+    }
+}
+
+SExpRef builtin_max(Interp *interp, SExpRef args) {
+    if (LENGTH(args) < 1) return new_error(interp, "min: wrong arg number.\n");
+    bool hasReal = false;
+    FOREACH(iter, args) {
+        SExpRef x = CAR(iter);
+        if (VALTYPE(x) == kRealSExp) hasReal = true;
+        if (VALTYPE(x) != kRealSExp && VALTYPE(x) != kIntegerSExp) {
+            return new_error(interp, "min: wrong type.\n");
+        }
+    }
+    if (hasReal) {
+        double max = -DBL_MAX;
+        FOREACH(iter, args) {
+            SExpRef x = CAR(iter);
+            if (VALTYPE(x) == kIntegerSExp) {
+                if (REF(x)->integer > max) {
+                    max = REF(x)->integer;
+                }
+            }
+            if (VALTYPE(x) == kRealSExp) {
+                if (REF(x)->real > max) {
+                    max = REF(x)->real;
+                }
+            }
+        }
+        return new_real(interp, max);
+    } else {
+        int64_t max = INT64_MIN;
+        FOREACH(iter, args) {
+            SExpRef x = CAR(iter);
+            if (VALTYPE(x) == kIntegerSExp) {
+                if (REF(x)->integer > max) {
+                    max = REF(x)->integer;
+                }
+            }
+        }
+        return new_integer(interp, max);
+    }
+}
 
 static bool equal_impl(Interp *interp, SExpRef x, SExpRef y) {
     if (VALTYPE(x) != VALTYPE(y)) return false;

@@ -86,6 +86,8 @@ void Interp_init(Interp *self) {
     Interp_add_primitive(self, "assert-error", primitive_assert_error);
     Interp_add_primitive(self, "load", primitive_load);
 
+    Interp_add_userfunc(self, "min", builtin_min);
+    Interp_add_userfunc(self, "max", builtin_max);
     Interp_add_userfunc(self, "eq", builtin_eq);
     Interp_add_userfunc(self, "equal", builtin_equal);
     Interp_add_userfunc(self, "format", builtin_format);

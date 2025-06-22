@@ -17,6 +17,13 @@
 (assert (/= 2 1.0))
 (assert (not (/= 1 1)))
 
+(assert (= 1.0 (max -2 0.1 0.2 1)))
+(assert (= 1.0 (min 1 2.0 3.2 4 100)))
+(assert (= 3 (max 3)))
+(assert (= 3 (min 3)))
+(assert-error (max))
+(assert-error (min))
+
 (assert-error (+ 1 "a"))
 (assert-error (- 1 "a"))
 (assert-error (* 1 "a"))

@@ -9,6 +9,8 @@
   `(setq ,i (- ,i 1)))
 
 (defun zerop (x) (= x 0))
+(defun plusp (x) (> x 0))
+(defun minusp (x) (< x 0))
 
 (defmacro when (pred . body)
   `(if ,pred
