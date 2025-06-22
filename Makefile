@@ -2,7 +2,7 @@ mode ?= debug
 cc = gcc
 includes = -I3rdparty/algds/build/include/
 3rdlibs = 3rdparty/algds/build/lib/libalgds.a
-ldflags = -lreadline
+ldflags = -lm -lreadline
 ifeq ($(mode), debug)
 	cflags = $(includes) \
 		-g \

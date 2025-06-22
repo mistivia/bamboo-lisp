@@ -1,6 +1,7 @@
 (defvar nil '())
 
 (defvar pi 3.1415926)
+(defvar e 2.718281828)
 
 (defmacro incq (i)
   `(setq ,i (+ ,i 1)))
