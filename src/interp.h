@@ -34,6 +34,7 @@ struct interp {
     SExpRef nil;
     char *errmsg_buf;
     Parser *parser;
+    int gensym_cnt;
 };
 
 void Interp_init(Interp *self);
