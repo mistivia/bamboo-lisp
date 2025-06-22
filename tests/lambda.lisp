@@ -24,3 +24,10 @@
   (assert (= 1 (funcall c)))
   (assert (= 2 (funcall c)))
   (assert (= 3 (funcall c))))
+
+(let ((x 1)
+      (fn nil))
+  (setq fn
+    (lambda (x) (setq x 2)))
+  (funcall fn x)
+  (assert (= x 1)))

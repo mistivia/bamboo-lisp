@@ -6,6 +6,28 @@
 #include <float.h>
 #include <math.h>
 
+SExpRef builtin_symbol2string(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "symbol->string: arg num error.\n");
+    SExpRef arg = CAR(args);
+    if (VALTYPE(arg) != kSymbolSExp) return new_error(interp, "symbol->string: type error.\n");
+    return new_string(interp, REF(arg)->str);
+}
+
+SExpRef builtin_intern(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "intern: arg num error.\n");
+    SExpRef arg = CAR(args);
+    if (VALTYPE(arg) != kStringSExp) return new_error(interp, "intern: type error.\n");
+    return new_symbol(interp, REF(arg)->str);
+}
+
+SExpRef builtin_gensym(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 0) return new_error(interp, "gensym: no arg.\n");
+    char buf[16];
+    snprintf(buf, 16, "sYyYm%d", interp->gensym_cnt);
+    interp->gensym_cnt++;
+    return new_symbol(interp, buf);
+}
+
 SExpRef builtin_float(Interp *interp, SExpRef args) {
     if (LENGTH(args) != 1) return new_error(interp, "float: expect 1 arg.\n");
     SExpRef x = CAR(args);

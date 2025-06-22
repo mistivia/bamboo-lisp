@@ -19,6 +19,9 @@ tests_bin=$(tests:.c=.bin)
 
 all: bamboo-lisp
 
+install: bamboo-lisp
+	sudo cp bamboo-lisp /usr/local/bin/bamboo
+
 src/prelude.c: src/prelude.lisp
 	cat src/prelude.lisp | python scripts/genprelude.py > src/prelude.c
 

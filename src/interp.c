@@ -20,6 +20,7 @@ VECTOR_IMPL(TopBinding);
 #define UNBOUND ((SExpRef){-1})
 
 void Interp_init(Interp *self) {
+    self->gensym_cnt = 42;
     self->parser = malloc(sizeof(Parser));
     Parser_init(self->parser);
     self->parser->ctx = self;
@@ -61,24 +62,24 @@ void Interp_init(Interp *self) {
     self->reg = self->nil;
 
     Interp_add_primitive(self, "eval", primitive_eval);
+    Interp_add_primitive(self, "apply", primitive_apply);
     Interp_add_primitive(self, "if", primitive_if);
     Interp_add_primitive(self, "cond", primitive_cond);
-    Interp_add_primitive(self, "progn", primitive_progn);
-    Interp_add_primitive(self, "setq", primitive_setq);
-    Interp_add_primitive(self, "let", primitive_let);
     Interp_add_primitive(self, "while", primitive_while);
+    Interp_add_primitive(self, "progn", primitive_progn);
+    Interp_add_primitive(self, "and", primitive_and);
+    Interp_add_primitive(self, "or", primitive_or);
+    Interp_add_primitive(self, "let", primitive_let);
+    Interp_add_primitive(self, "setq", primitive_setq);
     Interp_add_primitive(self, "lambda", primitive_lambda);
     Interp_add_primitive(self, "function", primitive_function);
     Interp_add_primitive(self, "defun", primitive_defun);
     Interp_add_primitive(self, "defvar", primitive_defvar);
     Interp_add_primitive(self, "defmacro", primitive_defmacro);
     Interp_add_primitive(self, "funcall", primitive_funcall);
-    Interp_add_primitive(self, "apply", primitive_apply);
     Interp_add_primitive(self, "quote", primitive_quote);
     Interp_add_primitive(self, "quasiquote", primitive_quasi);
     Interp_add_primitive(self, "macroexpand-1", primitive_macroexpand1);
-    Interp_add_primitive(self, "and", primitive_and);
-    Interp_add_primitive(self, "or", primitive_or);
     Interp_add_primitive(self, "return", primitive_return);
     Interp_add_primitive(self, "break", primitive_break);
     Interp_add_primitive(self, "continue", primitive_continue);
@@ -86,13 +87,20 @@ void Interp_init(Interp *self) {
     Interp_add_primitive(self, "assert-error", primitive_assert_error);
     Interp_add_primitive(self, "load", primitive_load);
 
-    Interp_add_userfunc(self, "round", builtin_round);
-    Interp_add_userfunc(self, "acos", builtin_acos);
-    Interp_add_userfunc(self, "floor", builtin_floor);
+    Interp_add_userfunc(self, "symbol->string", builtin_symbol2string);
+    Interp_add_userfunc(self, "intern", builtin_intern);
+    Interp_add_userfunc(self, "gensym", builtin_gensym);
+    Interp_add_userfunc(self, "float", builtin_float);
+    Interp_add_userfunc(self, "tan", builtin_tan);
     Interp_add_userfunc(self, "asin", builtin_asin);
+    Interp_add_userfunc(self, "acos", builtin_acos);
     Interp_add_userfunc(self, "log2", builtin_log2);
     Interp_add_userfunc(self, "pow", builtin_pow);
-    Interp_add_userfunc(self, "float", builtin_float);
+    Interp_add_userfunc(self, "expt", builtin_pow);
+    Interp_add_userfunc(self, "exp", builtin_exp);
+    Interp_add_userfunc(self, "sqrt", builtin_sqrt);
+    Interp_add_userfunc(self, "cbrt", builtin_cbrt);
+    Interp_add_userfunc(self, "log10", builtin_log10);
     Interp_add_userfunc(self, "eq", builtin_eq);
     Interp_add_userfunc(self, "ln", builtin_ln);
     Interp_add_userfunc(self, "=", builtin_num_equal);
@@ -102,13 +110,16 @@ void Interp_init(Interp *self) {
     Interp_add_userfunc(self, "format", builtin_format);
     Interp_add_userfunc(self, "truncate", builtin_truncate);
     Interp_add_userfunc(self, "mod", builtin_mod);
-    Interp_add_userfunc(self, "i/", builtin_idiv);
+    Interp_add_userfunc(self, "+", builtin_add);
     Interp_add_userfunc(self, "-", builtin_sub);
-    Interp_add_userfunc(self, "abs", builtin_abs);
     Interp_add_userfunc(self, "*", builtin_mul);
-    Interp_add_userfunc(self, "tan", builtin_tan);
-    Interp_add_userfunc(self, "exp", builtin_exp);
-    Interp_add_userfunc(self, "log10", builtin_log10);
+    Interp_add_userfunc(self, "/", builtin_div);
+    Interp_add_userfunc(self, "i/", builtin_idiv);
+    Interp_add_userfunc(self, ">", builtin_gt);
+    Interp_add_userfunc(self, "<", builtin_lt);
+    Interp_add_userfunc(self, ">=", builtin_ge);
+    Interp_add_userfunc(self, "<=", builtin_le);
+    Interp_add_userfunc(self, "abs", builtin_abs);
     Interp_add_userfunc(self, "list", builtin_list);
     Interp_add_userfunc(self, "car", builtin_car);
     Interp_add_userfunc(self, "sin", builtin_sin);
@@ -116,22 +127,16 @@ void Interp_init(Interp *self) {
     Interp_add_userfunc(self, "exit", builtin_exit);
     Interp_add_userfunc(self, "not", builtin_not);
     Interp_add_userfunc(self, "cos", builtin_cos);
-    Interp_add_userfunc(self, "<=", builtin_le);
     Interp_add_userfunc(self, "princ", builtin_princ);
-    Interp_add_userfunc(self, ">", builtin_gt);
-    Interp_add_userfunc(self, "+", builtin_add);
     Interp_add_userfunc(self, "equal", builtin_equal);
-    Interp_add_userfunc(self, "/", builtin_div);
     Interp_add_userfunc(self, "atan", builtin_atan);
     Interp_add_userfunc(self, "cons", builtin_cons);
     Interp_add_userfunc(self, "cdr", builtin_cdr);
     Interp_add_userfunc(self, "ceiling", builtin_ceiling);
+    Interp_add_userfunc(self, "round", builtin_round);
+    Interp_add_userfunc(self, "floor", builtin_floor);
     Interp_add_userfunc(self, "min", builtin_min);
     Interp_add_userfunc(self, "error", builtin_error);
-    Interp_add_userfunc(self, ">=", builtin_ge);
-    Interp_add_userfunc(self, "<", builtin_lt);
-    Interp_add_userfunc(self, "sqrt", builtin_sqrt);
-    Interp_add_userfunc(self, "cbrt", builtin_cbrt);
 
 
     Interp_add_userfunc(self, "_gcstat", builtin_gcstat);
