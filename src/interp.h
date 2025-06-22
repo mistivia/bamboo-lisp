@@ -53,6 +53,7 @@ SExpRef Interp_load_file(Interp *interp, const char *filename);
 #define EVAL(_x) (lisp_eval(interp, (_x), false))
 #define EVALTAIL(_x) (lisp_eval(interp, (_x), true))
 #define TRUEP(_x) (lisp_truep(interp, (_x)))
+#define FOREACH(_x, _lst) for (SExpRef _x = _lst; !NILP(_x); _x = CDR(_x))
 // control flow
 #define CTL_FL(_x) \
     (REF((_x))->type == kErrSignal \
