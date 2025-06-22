@@ -1,7 +1,8 @@
-(defun ~~ (a b)
-  (if (< (abs (- a b)) 0.01)
-    nil
-    (error "failed")))
+(defun ~~f (a b)
+  (< (abs (- a b)) 0.01))
+
+(defmacro ~~ (a b)
+  `(assert (~~f ,a ,b)))
 
 (assert (= 1 (abs -1)))
 (assert (= 1.1 (abs -1.1)))
