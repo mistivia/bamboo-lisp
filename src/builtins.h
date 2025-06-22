@@ -3,6 +3,26 @@
 
 #include "interp.h"
 
+
+SExpRef builtin_sqrt(Interp *interp, SExpRef sexp);
+SExpRef builtin_cbrt(Interp *interp, SExpRef sexp);
+SExpRef builtin_float(Interp *interp, SExpRef sexp);
+SExpRef builtin_abs(Interp *interp, SExpRef sexp);
+SExpRef builtin_pow(Interp *interp, SExpRef sexp);
+SExpRef builtin_floor(Interp *interp, SExpRef sexp);
+SExpRef builtin_truncate(Interp *interp, SExpRef sexp);
+SExpRef builtin_ceiling(Interp *interp, SExpRef sexp);
+SExpRef builtin_round(Interp *interp, SExpRef sexp);
+SExpRef builtin_sin(Interp *interp, SExpRef sexp);
+SExpRef builtin_cos(Interp *interp, SExpRef sexp);
+SExpRef builtin_tan(Interp *interp, SExpRef sexp);
+SExpRef builtin_asin(Interp *interp, SExpRef sexp);
+SExpRef builtin_acos(Interp *interp, SExpRef sexp);
+SExpRef builtin_atan(Interp *interp, SExpRef sexp);
+SExpRef builtin_ln(Interp *interp, SExpRef sexp);
+SExpRef builtin_log10(Interp *interp, SExpRef sexp);
+SExpRef builtin_log2(Interp *interp, SExpRef sexp);
+SExpRef builtin_exp(Interp *interp, SExpRef sexp);
 SExpRef builtin_min(Interp *interp, SExpRef sexp);
 SExpRef builtin_max(Interp *interp, SExpRef sexp);
 SExpRef builtin_equal(Interp *interp, SExpRef sexp);

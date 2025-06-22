@@ -4,6 +4,78 @@
 #include <algds/str.h>
 #include <stdint.h>
 #include <float.h>
+#include <math.h>
+
+SExpRef builtin_float(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "float: expect 1 arg.\n");
+    SExpRef x = CAR(args);
+    if (VALTYPE(x) != kIntegerSExp) return new_error(interp, "float: wrong type.\n");
+    return new_real(interp, REF(x)->integer);
+}
+
+SExpRef builtin_abs(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "abs: expect 1 arg.\n");
+    SExpRef x = CAR(args);
+    if (VALTYPE(x) != kIntegerSExp && VALTYPE(x) != kRealSExp) {
+        return new_error(interp, "abs: wrong type.\n");
+    }
+    if (VALTYPE(x) == kIntegerSExp) {
+        int64_t val = REF(x)->integer;
+        if (val < 0) val = -val;
+        return new_integer(interp, val);
+    } else {
+        double val = REF(x)->real;
+        if (val < 0) val = -val;
+        return new_real(interp, val);
+    }
+}
+
+static double real_value(Interp *interp, SExpRef x) {
+    if (VALTYPE(x) == kIntegerSExp) {
+        return REF(x)->integer;
+    } else {
+        return REF(x)->real;
+    }
+}    
+
+SExpRef builtin_pow(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "pow: expect 2 args.\n");
+    SExpRef x = CAR(args), y = CADR(args);
+    if (VALTYPE(x) != kIntegerSExp && VALTYPE(x) != kRealSExp) {
+        return new_error(interp, "pow: wrong type.\n");
+    }
+    if (VALTYPE(y) != kIntegerSExp && VALTYPE(y) != kRealSExp) {
+        return new_error(interp, "pow: wrong type.\n");
+    }
+    return new_real(interp, pow(real_value(interp, x), real_value(interp, y)));
+}
+
+#define GEN_MATH_FUNC(name, cfunc) \
+SExpRef builtin_##name(Interp *interp, SExpRef args) { \
+    if (LENGTH(args) != 1) return new_error(interp, #name": expect 1 args.\n"); \
+    SExpRef x = CAR(args); \
+    if (VALTYPE(x) != kIntegerSExp && VALTYPE(x) != kRealSExp) { \
+        return new_error(interp, #name": wrong type.\n"); \
+    } \
+    return new_real(interp, cfunc(real_value(interp, x))); \
+}
+
+GEN_MATH_FUNC(sqrt, sqrt);
+GEN_MATH_FUNC(cbrt, cbrt);
+GEN_MATH_FUNC(floor, floor);
+GEN_MATH_FUNC(truncate, trunc);
+GEN_MATH_FUNC(ceiling, ceil);
+GEN_MATH_FUNC(round, round);
+GEN_MATH_FUNC(sin, sin);
+GEN_MATH_FUNC(cos, cos);
+GEN_MATH_FUNC(tan, tan);
+GEN_MATH_FUNC(asin, asin);
+GEN_MATH_FUNC(acos, acos);
+GEN_MATH_FUNC(atan, atan);
+GEN_MATH_FUNC(ln, log);
+GEN_MATH_FUNC(log10, log10);
+GEN_MATH_FUNC(log2, log2);
+GEN_MATH_FUNC(exp, exp);
 
 SExpRef builtin_min(Interp *interp, SExpRef args) {
     if (LENGTH(args) < 1) return new_error(interp, "min: wrong arg number.\n");
@@ -294,9 +366,9 @@ static SExp raw_add(SExp a, SExp b) {
 static SExp raw_mul(SExp a, SExp b) {
     if (a.type == kRealSExp || b.type == kRealSExp) {
         double result = 1.0;
-        if (a.type == kRealSExp) result += a.real;
+        if (a.type == kRealSExp) result *= a.real;
         else result *= a.integer;
-        if (b.type == kRealSExp) result += b.real;
+        if (b.type == kRealSExp) result *= b.real;
         else result *= b.integer;
         return (SExp){ .type = kRealSExp, .real = result };
     } else {

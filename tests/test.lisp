@@ -4,6 +4,7 @@
     (load (format "%s.lisp" ,name))
     (princ (format "[PASS] %s\n" ,name))))
 
+(test-module "math")
 (test-module "eq")
 (test-module "arithmetic")
 (test-module "error")
