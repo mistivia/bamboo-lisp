@@ -14,10 +14,10 @@
 
 #define BUFSIZE 1024
 
-void PrimitiveEntry_show(PrimitiveEntry self, FILE *fp) { }
-VECTOR_IMPL(PrimitiveEntry);
+void TopBinding_show(TopBinding self, FILE *fp) { }
+VECTOR_IMPL(TopBinding);
 
-SExpRef unbound = {-1};
+#define UNBOUND ((SExpRef){-1})
 
 void Interp_init(Interp *self) {
     self->parser = malloc(sizeof(Parser));
@@ -26,7 +26,7 @@ void Interp_init(Interp *self) {
     self->errmsg_buf = malloc(BUFSIZE);
     SExpVector_init(&self->objs);
     IntVector_init(&self->empty_space);
-    PrimitiveEntryVector_init(&self->primitives);
+    TopBindingVector_init(&self->topbindings);
     String2IntHashTable_init(&self->symbols);
     int i = 0;
     SExp sexp;
@@ -109,7 +109,6 @@ void Interp_init(Interp *self) {
     Interp_add_userfunc(self, "<=", builtin_le);
     Interp_add_userfunc(self, "not", builtin_not);
     Interp_add_userfunc(self, "exit", builtin_exit);
-    // debug functions
     Interp_add_userfunc(self, "_gcstat", builtin_gcstat);
 
     SExpRef ret = Interp_eval_string(self, bamboo_lisp_prelude);
@@ -180,7 +179,8 @@ end:
 
 void Interp_add_userfunc(Interp *interp, const char *name, LispUserFunc fn) {
     SExpRef userfunc = new_userfunc(interp, fn);
-    lisp_defun(interp, name, userfunc);
+    SExpRef sym = new_symbol(interp, name);
+    lisp_defun(interp, sym, userfunc);
 }
 
 void Interp_free(Interp *self) {
@@ -198,7 +198,7 @@ void Interp_free(Interp *self) {
     String2IntHashTable_free(&self->symbols);
     SExpVector_free(&self->objs);
     IntVector_free(&self->empty_space);
-    PrimitiveEntryVector_free(&self->primitives);
+    TopBindingVector_free(&self->topbindings);
     free(self->errmsg_buf);
     Parser_free(self->parser);
     free(self->parser);
@@ -211,10 +211,9 @@ SExp* Interp_ref(Interp *self, SExpRef ref) {
 }
 
 void Interp_add_primitive(Interp *self, const char *name, LispPrimitive fn) {
-    PrimitiveEntryVector_push_back(&self->primitives, (PrimitiveEntry){
-        .name = name,
-        .fn = fn
-    });
+    SExpRef sym = new_symbol(self, name);
+    SExpRef prim = new_primitive(self, fn);
+    lisp_defun(self, sym, prim);
 }
 
 void Interp_gc(Interp *interp, SExpRef tmproot) {
@@ -419,46 +418,48 @@ error:
     return new_error(interp, "macroexpand: syntax error.\n");
 }
 
-void lisp_defun(Interp *interp, const char *name, SExpRef val) {
+void lisp_defun(Interp *interp, SExpRef name, SExpRef val) {
     SExpRef binding = REF(interp->top_level)->env.bindings;
     while (REF(binding)->type != kNilSExp) {
-        if (strcmp(name, REF(REF(binding)->binding.name)->str) == 0) {
+        if (name.idx == REF(binding)->binding.name.idx) {
             REF(binding)->binding.func = val;
             return;
         }
         binding = REF(binding)->binding.next;
     }
     binding = REF(interp->top_level)->env.bindings;
-    SExpRef newbinding = new_binding(interp, new_symbol(interp, name), NIL);
+    SExpRef newbinding = new_binding(interp, name, NIL);
     REF(newbinding)->binding.func = val;
-    REF(newbinding)->binding.value = unbound;
+    REF(newbinding)->binding.value = UNBOUND;
     REF(newbinding)->binding.next = binding;
     REF(interp->top_level)->env.bindings = newbinding;
+    TopBindingVector_push_back(&interp->topbindings, (TopBinding){name, newbinding});
 }
 
-void lisp_defvar(Interp *interp, const char *name, SExpRef val) {
+void lisp_defvar(Interp *interp, SExpRef name, SExpRef val) {
     SExpRef binding = REF(interp->top_level)->env.bindings;
     while (REF(binding)->type != kNilSExp) {
-        if (strcmp(name, REF(REF(binding)->binding.name)->str) == 0) {
+        if (name.idx == REF(binding)->binding.name.idx) {
             REF(binding)->binding.value = val;
             return;
         }
         binding = REF(binding)->binding.next;
     }
     binding = REF(interp->top_level)->env.bindings;
-    SExpRef newbinding = new_binding(interp, new_symbol(interp, name), NIL);
-    REF(newbinding)->binding.func = unbound;
+    SExpRef newbinding = new_binding(interp, name, NIL);
+    REF(newbinding)->binding.func = UNBOUND;
     REF(newbinding)->binding.value = val;
     REF(newbinding)->binding.next = binding;
     REF(interp->top_level)->env.bindings = newbinding;
+    TopBindingVector_push_back(&interp->topbindings, (TopBinding){name, newbinding});
 }
 
-SExpRef lisp_setq(Interp *interp, const char *name, SExpRef val) {
+SExpRef lisp_setq(Interp *interp, SExpRef name, SExpRef val) {
     SExpRef env = CAR(interp->stack);
     while (REF(env)->type != kNilSExp) {
         SExpRef binding = REF(env)->env.bindings;
         while (REF(binding)->type != kNilSExp) {
-            if (strcmp(name, REF(REF(binding)->binding.name)->str) == 0) {
+            if (name.idx == REF(binding)->binding.name.idx) {
                 REF(binding)->binding.value = val;
                 return val;
             }
@@ -466,15 +467,20 @@ SExpRef lisp_setq(Interp *interp, const char *name, SExpRef val) {
         }
         env = REF(env)->env.parent;
     }
-    return new_error(interp, "Unbound variable: %s.\n", name);
+    return new_error(interp, "Unbound variable: %s.\n", REF(name)->str);
 }
 
-SExpRef lisp_lookup(Interp *interp, const char *name) {
+SExpRef lisp_lookup_topvar(Interp *interp, SExpRef name);
+
+SExpRef lisp_lookup(Interp *interp, SExpRef name) {
     SExpRef env = CAR(interp->stack);
     while (REF(env)->type != kNilSExp) {
+        if (env.idx == interp->top_level.idx) {
+            return lisp_lookup_topvar(interp, name);
+        }
         SExpRef binding = REF(env)->env.bindings;
         while (REF(binding)->type != kNilSExp) {
-            if (strcmp(name, REF(REF(binding)->binding.name)->str) == 0) {
+            if (name.idx == REF(binding)->binding.name.idx) {
                 SExpRef ret = REF(binding)->binding.value;
                 if (ret.idx < 0) goto notfound;
                 return ret;
@@ -484,7 +490,7 @@ SExpRef lisp_lookup(Interp *interp, const char *name) {
         env = REF(env)->env.parent;
     }
 notfound:
-    return new_error(interp, "Unbound variable: %s.\n", name);
+    return new_error(interp, "Unbound variable: %s.\n", REF(name)->str);
 }
 
 void lisp_print(Interp *interp, SExpRef obj, FILE *fp) {
@@ -493,18 +499,32 @@ void lisp_print(Interp *interp, SExpRef obj, FILE *fp) {
     free((void*)str);
 }
 
-SExpRef lisp_lookup_func(Interp *interp, const char *name) {
-    SExpRef binding = REF(interp->top_level)->env.bindings;
-    while (REF(binding)->type != kNilSExp) {
-        if (strcmp(name, REF(REF(binding)->binding.name)->str) == 0) {
-            SExpRef ret = REF(binding)->binding.func;
+SExpRef lisp_lookup_topvar(Interp *interp, SExpRef name) {
+    int topbindings_len = TopBindingVector_len(&interp->topbindings);
+    for (int i = 0; i < topbindings_len; i++) {
+        TopBinding topbinding = interp->topbindings.buffer[i];
+        if (topbinding.name.idx == name.idx) {
+            SExpRef ret = REF(topbinding.binding)->binding.value;
             if (ret.idx < 0) goto notfound;
             return ret;
         }
-        binding = REF(binding)->binding.next;
     }
 notfound:
-    return new_error(interp, "Unbound function: %s.\n", name);
+    return new_error(interp, "Unbound variable: %s.\n", REF(name)->str);
+}
+
+SExpRef lisp_lookup_func(Interp *interp, SExpRef name) {
+    int topbindings_len = TopBindingVector_len(&interp->topbindings);
+    for (int i = 0; i < topbindings_len; i++) {
+        TopBinding topbinding = interp->topbindings.buffer[i];
+        if (topbinding.name.idx == name.idx) {
+            SExpRef ret = REF(topbinding.binding)->binding.func;
+            if (ret.idx < 0) goto notfound;
+            return ret;
+        }
+    }
+notfound:
+    return new_error(interp, "Unbound function: %s.\n", REF(name)->str);
 }
 
 bool lisp_nilp(Interp *interp, SExpRef obj) {
@@ -588,9 +608,6 @@ static SExpRef build_function_env(Interp *interp, SExpRef func, SExpRef args) {
 }
 
 SExpRef lisp_apply(Interp *interp, SExpRef fn, SExpRef args, bool istail) {
-    // const char *sexp_str = lisp_to_string(interp, args);
-    // fprintf(stderr, "DEBUG: apply: %s, istail: %d\n", sexp_str, istail);
-    // free((void*)sexp_str);
     SExpRef exp, env, ret, iter;
     if (istail) return new_tailcall(interp, fn, args);
     if (VALTYPE(fn) == kFuncSExp) {
@@ -628,9 +645,6 @@ error:
 }
 
 SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
-    // const char *sexp_str = lisp_to_string(interp, sexp);
-    // fprintf(stderr, "DEBUG: eval: %s, istail: %d\n", sexp_str, istail);
-    // free((void*)sexp_str);
     SExpRef ret;
     SExpType type;
     PUSH_REG(sexp);
@@ -655,7 +669,7 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
         goto end;
     }
     if (type == kSymbolSExp) {
-        ret = lisp_lookup(interp, REF(sexp)->str);
+        ret = lisp_lookup(interp, sexp);
         goto end;
     }
     SExpRef fn, funcallargs, args;
@@ -668,26 +682,23 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
             ret = new_error(interp, "eval: first elem must be a symbol.\n");
             goto end;
         }
-        const char *symbol = REF(CAR(sexp))->str;
-        for (int i = 0; i < PrimitiveEntryVector_len(&interp->primitives); i++) {
-            if (strcmp(symbol, PrimitiveEntryVector_ref(&interp->primitives, i)->name) == 0) {
-                LispPrimitive primitive_fn =
-                    PrimitiveEntryVector_ref(&interp->primitives, i)->fn;
-                ret = (*primitive_fn)(interp, CDR(sexp), istail);
-                if (VALTYPE(ret) == kTailcallSExp && !istail) {
+        SExpRef symbol = CAR(sexp);
+        fn = lisp_lookup_func(interp, symbol);
+        if (CTL_FL(fn)) {
+            ret = new_error(interp, "eval: \"%s\" is not a primitive, function, "
+                    "or macro.\n", REF(symbol)->str);
+            goto end;
+        }
+        if (VALTYPE(fn) == kPrimitiveSExp) {
+            LispPrimitive primitive_fn = REF(fn)->primitive;
+            ret = (*primitive_fn)(interp, CDR(sexp), istail);
+            if (VALTYPE(ret) == kTailcallSExp && !istail) {
                     fn = REF(ret)->tailcall.fn;
                     args = REF(ret)->tailcall.args;
                     goto tailcall;
-                }
-                goto end;
             }
-        }
-        fn = lisp_lookup_func(interp, symbol);
-        if (CTL_FL(fn)) {
-            ret = new_error(interp, "eval: \"%s\" is not a primitive, function, or macro.\n", symbol);
             goto end;
-        }
-        if (VALTYPE(fn) == kFuncSExp || VALTYPE(fn) == kUserFuncSExp) {
+        } else if (VALTYPE(fn) == kFuncSExp || VALTYPE(fn) == kUserFuncSExp) {
             args = CDR(sexp);
             funcallargs = CONS(fn, args);
             PUSH_REG(funcallargs);
@@ -706,6 +717,10 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
             ret = lisp_eval(interp, newast, istail);
             POP_REG();
             goto end;
+        } else {
+            return new_error(interp,
+                    "eval: fatal binding eval, %s is not a func, prim "
+                    "or macro.\n", REF(symbol)->str);
         }
     }
     ret = new_error(interp, "eval: unknown syntax.\n");
@@ -776,7 +791,7 @@ SExpRef new_binding(Interp *interp, SExpRef sym, SExpRef val) {
     REF(ret)->type = kBindingSExp;
     REF(ret)->binding.name = sym;
     REF(ret)->binding.value = val;
-    REF(ret)->binding.func = unbound;
+    REF(ret)->binding.func = UNBOUND;
     REF(ret)->binding.next = NIL;
     return ret;
 }
@@ -871,6 +886,13 @@ SExpRef new_continue(Interp *interp) {
     SExpRef ret = new_sexp(interp);
     SExp *psexp = Interp_ref(interp, ret);
     psexp->type = kContinueSignal;
+    return ret;
+}
+
+SExpRef new_primitive(Interp *interp, LispPrimitive val) {
+    SExpRef ret = new_sexp(interp);
+    REF(ret)->type = kPrimitiveSExp;
+    REF(ret)->primitive = val;
     return ret;
 }
 
