@@ -6,6 +6,110 @@
 #include <float.h>
 #include <math.h>
 
+SExpRef builtin_string(Interp *interp, SExpRef args) {
+    for (SExpRef i = args; !NILP(i); i = CDR(i)) {
+        SExpRef x = CAR(i);
+        if (VALTYPE(x) != kIntegerSExp && VALTYPE(x) != kCharSExp) {
+            return new_error(interp, "string: type error.\n");    
+        }
+    }
+    str_builder_t sb;
+    init_str_builder(&sb);
+    for (SExpRef i = args; !NILP(i); i = CDR(i)) {
+        SExpRef x = CAR(i);
+        if (VALTYPE(x) == kIntegerSExp) {
+            str_builder_append_char(&sb, REF(x)->integer);
+        } else {
+            str_builder_append_char(&sb, REF(x)->character);
+        }
+    }
+    str_builder_append_char(&sb, '\0');
+    SExpRef ret = new_string(interp, sb.buf);
+    free(sb.buf);
+    return ret;
+}
+
+SExpRef builtin_string_eq(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "string=: arg num error.\n");
+    SExpRef s1 = CAR(args), s2 = CADR(args);
+    if (VALTYPE(s1) != kStringSExp || VALTYPE(s2) != kStringSExp) {
+        return new_error(interp, "string=: type error.\n");
+    }
+    return new_boolean(interp, strcmp(REF(s1)->str, REF(s2)->str) == 0);
+}
+
+SExpRef builtin_string_gt(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "string>: arg num error.\n");
+    SExpRef s1 = CAR(args), s2 = CADR(args);
+    if (VALTYPE(s1) != kStringSExp || VALTYPE(s2) != kStringSExp) {
+        return new_error(interp, "string>: type error.\n");
+    }
+    return new_boolean(interp, strcmp(REF(s1)->str, REF(s2)->str) > 0);
+
+}
+
+SExpRef builtin_string_lt(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "string<: arg num error.\n");
+    SExpRef s1 = CAR(args), s2 = CADR(args);
+    if (VALTYPE(s1) != kStringSExp || VALTYPE(s2) != kStringSExp) {
+        return new_error(interp, "string<: type error.\n");
+    }
+    return new_boolean(interp, strcmp(REF(s1)->str, REF(s2)->str) < 0);
+}
+
+SExpRef builtin_string_ge(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "string>=: arg num error.\n");
+    SExpRef s1 = CAR(args), s2 = CADR(args);
+    if (VALTYPE(s1) != kStringSExp || VALTYPE(s2) != kStringSExp) {
+        return new_error(interp, "string>=: type error.\n");
+    }
+    return new_boolean(interp, strcmp(REF(s1)->str, REF(s2)->str) >= 0);
+}
+
+SExpRef builtin_string_le(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "string<=: arg num error.\n");
+    SExpRef s1 = CAR(args), s2 = CADR(args);
+    if (VALTYPE(s1) != kStringSExp || VALTYPE(s2) != kStringSExp) {
+        return new_error(interp, "string<=: type error.\n");
+    }
+    return new_boolean(interp, strcmp(REF(s1)->str, REF(s2)->str) <= 0);
+}
+
+SExpRef builtin_string_neq(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "string/=: arg num error.\n");
+    SExpRef s1 = CAR(args), s2 = CADR(args);
+    if (VALTYPE(s1) != kStringSExp || VALTYPE(s2) != kStringSExp) {
+        return new_error(interp, "string/=: type error.\n");
+    }
+    return new_boolean(interp, strcmp(REF(s1)->str, REF(s2)->str) != 0);
+}
+
+SExpRef builtin_split_string(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "split-string: arg num error.\n");
+    SExpRef s1 = CAR(args), s2 = CADR(args);
+    if (VALTYPE(s1) != kStringSExp || VALTYPE(s2) != kCharSExp) {
+        return new_error(interp, "split-string: type error.\n");
+    }
+    char **ss;
+    ss = str_split((char*)REF(s1)->str, REF(s2)->character);
+    SExpRef lst = NIL;
+    for (char **i = ss; *i != NULL; i++) {
+        lst = CONS(new_string(interp, *i), lst);
+    }
+    destroy_str_list(ss);
+    return lisp_nreverse(interp, lst);
+}
+
+SExpRef builtin_strip_string(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "strip-string: arg num error.\n");
+    SExpRef s = CAR(args);
+    if (VALTYPE(s) != kStringSExp) return new_error(interp, "strip-string: type error.\n");    
+    char *news = str_strip((char*)REF(s)->str);
+    SExpRef ret = new_string(interp, news);
+    free(news);
+    return ret;
+}
+
 SExpRef builtin_alwaysgc(Interp *interp, SExpRef args) {
     if (LENGTH(args) != 1) return new_error(interp, "_alwaysgc: arg num error.\n");
     SExpRef arg = CAR(args);

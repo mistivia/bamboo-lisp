@@ -6,6 +6,7 @@
 (defun is-odd (x)
     (is-even (- x 1)))
 
+(assert (is-even 100))
 (assert (is-even 10))
 (assert (is-even 0))
 (assert (is-odd 1))
@@ -17,3 +18,4 @@
     (progn
       (cnt-down (- x 1)))))
 
+(cnt-down 100)
