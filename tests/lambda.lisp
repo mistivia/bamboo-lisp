@@ -31,3 +31,9 @@
     (lambda (x) (setq x 2)))
   (funcall fn x)
   (assert (= x 1)))
+
+(assert-error
+  (let
+    ((f
+       (lambda (x) (funcall f 1) x)))
+    (funcall f 1)))

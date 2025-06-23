@@ -36,6 +36,7 @@ struct interp {
     Parser *parser;
     int gensym_cnt;
     bool alwaysgc;
+    int recursion_depth;
 };
 
 void Interp_init(Interp *self);
