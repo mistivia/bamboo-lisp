@@ -2,7 +2,7 @@
   (let ((name (symbol->string module)))
     `(progn
       (princ (format "[TEST] %s\n" ,name))
-      (load (format "%s.lisp" ,name))
+      (load (format "tests/%s.lisp" ,name))
       (princ (format "[PASS] %s\n" ,name)))))
 
 (test-module math)
