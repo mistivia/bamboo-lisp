@@ -8,3 +8,5 @@ compile_commands.json
 todo
 fibo.lisp
 debug.lisp
+perf.data
+perf.data.old

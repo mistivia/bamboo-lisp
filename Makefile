@@ -37,8 +37,7 @@ test: bamboo-lisp $(tests_bin)
 	@echo "Run tests:"
 	@scripts/runall.sh $(tests_bin)
 	@echo "Run scripts:"
-	cd tests/ && \
-		../bamboo-lisp test.lisp
+	./bamboo-lisp tests/test.lisp
 
 
 $(obj):%.o:%.c
