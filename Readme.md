@@ -2,10 +2,6 @@
 
 Embeddable & Hackable Lisp-2 Interpreter
 
-## WARNING
-
-This project is still a toy project in very early stage. Don't use it in production!
-
 ## Features & Drawbacks
 
 - Lisp-2 (more like Common Lisp or Emacs Lisp)
