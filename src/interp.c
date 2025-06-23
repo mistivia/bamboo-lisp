@@ -106,6 +106,15 @@ void Interp_init(Interp *self) {
     Interp_add_userfunc(self, "=", builtin_num_equal);
     Interp_add_userfunc(self, "/=", builtin_num_neq);
     Interp_add_userfunc(self, "concat", builtin_concat);
+    Interp_add_userfunc(self, "string", builtin_string);
+    Interp_add_userfunc(self, "string=", builtin_string_eq);
+    Interp_add_userfunc(self, "string>=", builtin_string_ge);
+    Interp_add_userfunc(self, "string<=", builtin_string_le);
+    Interp_add_userfunc(self, "string>", builtin_string_gt);
+    Interp_add_userfunc(self, "string<", builtin_string_lt);
+    Interp_add_userfunc(self, "string/=", builtin_string_neq);
+    Interp_add_userfunc(self, "split-string", builtin_split_string);
+    Interp_add_userfunc(self, "strip-string", builtin_strip_string);
     Interp_add_userfunc(self, "print", builtin_print);
     Interp_add_userfunc(self, "format", builtin_format);
     Interp_add_userfunc(self, "truncate", builtin_truncate);
@@ -330,11 +339,11 @@ void Interp_gc(Interp *interp, SExpRef tmproot) {
     // enlarge heap
     heapsize = SExpVector_len(&interp->objs);
     int usedsize = heapsize - IntVector_len(&interp->empty_space);
-    if (heapsize < usedsize * 2) {
+    if (heapsize < usedsize * 4) {
         SExp sexp;
         sexp.marked = false;
         sexp.type = kEmptySExp;
-        while (SExpVector_len(&interp->objs) < usedsize * 2) {
+        while (SExpVector_len(&interp->objs) < usedsize * 4) {
             SExpVector_push_back(&interp->objs, sexp);
             IntVector_push_back(&interp->empty_space, SExpVector_len(&interp->objs) - 1);
         }

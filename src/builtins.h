@@ -3,6 +3,24 @@
 
 #include "interp.h"
 
+// - char=
+// - char>
+// - char<
+// - char>=
+// - char<=
+// - char/=
+// - ord
+// - chr
+
+SExpRef builtin_string(Interp *interp, SExpRef args);
+SExpRef builtin_string_eq(Interp *interp, SExpRef args);
+SExpRef builtin_string_gt(Interp *interp, SExpRef args);
+SExpRef builtin_string_lt(Interp *interp, SExpRef args);
+SExpRef builtin_string_ge(Interp *interp, SExpRef args);
+SExpRef builtin_string_le(Interp *interp, SExpRef args);
+SExpRef builtin_string_neq(Interp *interp, SExpRef args);
+SExpRef builtin_split_string(Interp *interp, SExpRef args);
+SExpRef builtin_strip_string(Interp *interp, SExpRef args);
 SExpRef builtin_symbol2string(Interp *interp, SExpRef args);
 SExpRef builtin_intern(Interp *interp, SExpRef args);
 SExpRef builtin_gensym(Interp *interp, SExpRef args);
