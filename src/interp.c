@@ -20,6 +20,7 @@ VECTOR_IMPL(TopBinding);
 #define UNBOUND ((SExpRef){-1})
 
 void Interp_init(Interp *self) {
+    self->recursion_depth = 0;
     self->gensym_cnt = 42;
     self->parser = malloc(sizeof(Parser));
     Parser_init(self->parser);
@@ -396,7 +397,7 @@ void lisp_to_string_impl(str_builder_t *sb, Int2IntHashTable *visited, Interp *i
     if (pe->type == kIntegerSExp) {
         str_builder_append(sb, "%"PRId64, pe->integer);
     } else if (pe->type == kRealSExp) {
-        str_builder_append(sb, "%lf", pe->real);
+        str_builder_append(sb, "%lg", pe->real);
     } else if (pe->type == kCharSExp) {
         str_builder_append(sb, "#\%c", pe->character);
     } else if (pe->type == kBooleanSExp) {
@@ -682,11 +683,20 @@ static SExpRef build_function_env(Interp *interp, SExpRef func, SExpRef args) {
 }
 
 SExpRef lisp_apply(Interp *interp, SExpRef fn, SExpRef args, bool istail) {
+    if (interp->recursion_depth > 2048)
+        return new_error(interp, "apply: stack overflow.\n");
+    interp->recursion_depth++;
     SExpRef exp, env, ret, iter;
-    if (istail) return new_tailcall(interp, fn, args);
+    if (istail) {
+        interp->recursion_depth--;
+        return new_tailcall(interp, fn, args);
+    }
     if (VALTYPE(fn) == kFuncSExp) {
         env = build_function_env(interp, fn, args);
-        if (CTL_FL(env)) return env;
+        if (CTL_FL(env)) {
+            interp->recursion_depth--;
+            return env;
+        }
         interp->stack = CONS(env, interp->stack);
         iter = REF(fn)->func.body;
         while (!NILP(iter)) {
@@ -705,6 +715,7 @@ SExpRef lisp_apply(Interp *interp, SExpRef fn, SExpRef args, bool istail) {
         PUSH_REG(args);
         ret = (*fnptr)(interp, args);
         POP_REG();
+        interp->recursion_depth--;
         return ret;
     }
 end:
@@ -715,12 +726,15 @@ end:
         ret = REF(ret)->ret;
     }
     interp->stack = CDR(interp->stack);
+    interp->recursion_depth--;
     return ret;
-error:
-    return new_error(interp, "function call: syntax error.\n");
 }
 
 SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
+    if (interp->recursion_depth > 2048) {
+        return new_error(interp, "eval: stack overflow.\n");
+    }
+    interp->recursion_depth++;
     SExpRef ret;
     SExpType type;
     PUSH_REG(sexp);
@@ -794,15 +808,17 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
             POP_REG();
             goto end;
         } else {
-            return new_error(interp,
+            ret = new_error(interp,
                     "eval: fatal binding eval, %s is not a func, prim "
                     "or macro.\n", REF(symbol)->str);
+            goto end;
         }
     }
     ret = new_error(interp, "eval: unknown syntax.\n");
 end:
     POP_REG();
     Interp_gc(interp, ret);
+    interp->recursion_depth--;
     return ret;
 tailcall:
     while (1) {

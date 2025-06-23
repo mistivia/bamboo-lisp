@@ -25,7 +25,7 @@ install: bamboo-lisp
 src/prelude.c: src/prelude.lisp
 	cat src/prelude.lisp | python scripts/genprelude.py > src/prelude.c
 
-bamboo-lisp:  $(obj) src/main.c 3rdparty/algds/build/lib/libalgds.a
+bamboo-lisp:  $(obj) src/main.o 3rdparty/algds/build/lib/libalgds.a
 	gcc $(cflags) -o $@ $^ $(ldflags)
 
 3rdparty/algds/build/lib/libalgds.a:
@@ -39,6 +39,8 @@ test: bamboo-lisp $(tests_bin)
 	@echo "Run scripts:"
 	./bamboo-lisp tests/test.lisp
 
+src/main.o:src/main.c
+	$(cc) -c $(cflags) $< -MD -MF $@.d -o $@
 
 $(obj):%.o:%.c
 	$(cc) -c $(cflags) $< -MD -MF $@.d -o $@
