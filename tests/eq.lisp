@@ -1,5 +1,5 @@
-(assert-error (eq?1 2 3))
-(assert-error (equal?1 2 3))
+(assert-error (eq? 1 2 3))
+(assert-error (equal? 1 2 3))
 
 (assert (eq? 1 1))
 (assert (eq? 'a 'a))
