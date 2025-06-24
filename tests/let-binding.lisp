@@ -22,3 +22,9 @@
   (assert (not (funcall my-evenp 9)))
   (assert (not (funcall my-oddp 10))))
 
+(assert
+  (= 2
+     (funcall
+       (lambda ()
+         (let () (return 2))
+         (return 1)))))
