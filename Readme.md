@@ -2,7 +2,7 @@
 
 Embeddable & Hackable Lisp-2 Interpreter
 
-## Features & Drawbacks
+## Features
 
 - Lisp-2 (more like Common Lisp or Emacs Lisp)
 - Lexical scoping
@@ -10,7 +10,6 @@ Embeddable & Hackable Lisp-2 Interpreter
 - Tail call optimization
 - Any C99 compiler should work
 - Depends only on C standard library
-- SLOW (trade-off for simplicity)
 - A simple mark-sweep GC
 - Writing macro is easy with quasiquote, unquote, and slicing-unquote
 - No global state, you can run multiple interpreters in multiple threads
@@ -18,6 +17,10 @@ Embeddable & Hackable Lisp-2 Interpreter
     - return
     - break
     - continue
+
+## Drawbacks
+
+Bamboo Lisp is VERY SLOW tree-walking interpreter. The performance is only 1/5 to 1/10 that of Python, similar to other small interpreters like TinyScheme or very early Emacs Lisp.
 
 ## Build
 

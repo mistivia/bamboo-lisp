@@ -3,15 +3,11 @@
 
 #include "interp.h"
 
-// - char=
-// - char>
-// - char<
-// - char>=
-// - char<=
-// - char/=
-// - ord
-// - chr
-
+SExpRef builtin_set_car(Interp *interp, SExpRef args);
+SExpRef builtin_set_cdr(Interp *interp, SExpRef args);
+SExpRef builtin_length(Interp *interp, SExpRef args);
+SExpRef builtin_nth(Interp *interp, SExpRef args);
+SExpRef builtin_nthcdr(Interp *interp, SExpRef args);
 SExpRef builtin_string(Interp *interp, SExpRef args);
 SExpRef builtin_string_eq(Interp *interp, SExpRef args);
 SExpRef builtin_string_gt(Interp *interp, SExpRef args);

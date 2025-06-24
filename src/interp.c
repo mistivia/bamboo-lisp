@@ -102,7 +102,7 @@ void Interp_init(Interp *self) {
     Interp_add_userfunc(self, "sqrt", builtin_sqrt);
     Interp_add_userfunc(self, "cbrt", builtin_cbrt);
     Interp_add_userfunc(self, "log10", builtin_log10);
-    Interp_add_userfunc(self, "eq", builtin_eq);
+    Interp_add_userfunc(self, "eq?", builtin_eq);
     Interp_add_userfunc(self, "ln", builtin_ln);
     Interp_add_userfunc(self, "=", builtin_num_equal);
     Interp_add_userfunc(self, "/=", builtin_num_neq);
@@ -138,7 +138,7 @@ void Interp_init(Interp *self) {
     Interp_add_userfunc(self, "not", builtin_not);
     Interp_add_userfunc(self, "cos", builtin_cos);
     Interp_add_userfunc(self, "princ", builtin_princ);
-    Interp_add_userfunc(self, "equal", builtin_equal);
+    Interp_add_userfunc(self, "equal?", builtin_equal);
     Interp_add_userfunc(self, "atan", builtin_atan);
     Interp_add_userfunc(self, "cons", builtin_cons);
     Interp_add_userfunc(self, "cdr", builtin_cdr);
@@ -147,7 +147,11 @@ void Interp_init(Interp *self) {
     Interp_add_userfunc(self, "floor", builtin_floor);
     Interp_add_userfunc(self, "min", builtin_min);
     Interp_add_userfunc(self, "error", builtin_error);
-
+    Interp_add_userfunc(self, "set-car", builtin_set_car);
+    Interp_add_userfunc(self, "set-cdr", builtin_set_cdr);
+    Interp_add_userfunc(self, "length", builtin_length);
+    Interp_add_userfunc(self, "nth", builtin_nth);
+    Interp_add_userfunc(self, "nthcdr", builtin_nthcdr);
 
     Interp_add_userfunc(self, "_gcstat", builtin_gcstat);
     Interp_add_userfunc(self, "_alwaysgc", builtin_alwaysgc);
@@ -399,7 +403,7 @@ void lisp_to_string_impl(str_builder_t *sb, Int2IntHashTable *visited, Interp *i
     } else if (pe->type == kRealSExp) {
         str_builder_append(sb, "%lg", pe->real);
     } else if (pe->type == kCharSExp) {
-        str_builder_append(sb, "#\%c", pe->character);
+        str_builder_append(sb, "#\\%c", pe->character);
     } else if (pe->type == kBooleanSExp) {
         if (pe->boolean) str_builder_append(sb, "#t");
         else str_builder_append(sb, "#f");

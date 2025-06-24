@@ -6,6 +6,84 @@
 #include <float.h>
 #include <math.h>
 
+SExpRef builtin_set_car(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) {
+        return new_error(interp, "set-car: args num error.\n");
+    }
+    SExpRef lst = CAR(args), elem = CADR(args);
+    if (VALTYPE(lst) != kPairSExp) {
+        return new_error(interp, "set-car: type error.");
+    }
+    REF(lst)->pair.car = elem;
+    return NIL;
+}
+
+SExpRef builtin_set_cdr(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) {
+        return new_error(interp, "set-cdr: args num error.\n");
+    }
+    SExpRef lst = CAR(args), elem = CADR(args);
+    if (VALTYPE(lst) != kPairSExp) {
+        return new_error(interp, "set-cdr: type error.");
+    }
+    REF(lst)->pair.cdr = elem;
+    return NIL;
+}
+
+SExpRef builtin_length(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) {
+        return new_error(interp, "length: args num error.\n");
+    }
+    int len = LENGTH(CAR(args));
+    if (len < 0) {
+        return new_error(interp, "length: type error.\n");
+    }
+    return new_integer(interp, len);
+}
+
+SExpRef builtin_nth(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) {
+        return new_error(interp, "nth: args num error.\n");
+    }
+    SExpRef n = CAR(args), lst = CADR(args);
+    if (VALTYPE(n) != kIntegerSExp) return new_error(interp, "nth: type error.\n");
+    if (VALTYPE(lst) == kPairSExp) {
+        if (REF(n)->integer >= LENGTH(lst)) {
+            return new_error(interp, "nth: out of bound.\n");
+        }
+        for (int i = 0; i < REF(n)->integer; i++) {
+            lst = CDR(lst);
+        }
+        return CAR(lst);
+    } else if (VALTYPE(lst) == kStringSExp) {
+        if (REF(n)->integer >= strlen(REF(lst)->str)) {
+            return new_error(interp, "nth: out of bound\n");
+        }
+        return new_char(interp, REF(lst)->str[REF(n)->integer]);
+    } else {
+        return new_error(interp, "nth: type error.\n");
+    }
+}
+
+SExpRef builtin_nthcdr(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) {
+        return new_error(interp, "nth: args num error.\n");
+    }
+    SExpRef n = CAR(args), lst = CADR(args);
+    if (VALTYPE(n) != kIntegerSExp) return new_error(interp, "nth: type error.\n");
+    if (VALTYPE(lst) == kPairSExp) {
+        if (REF(n)->integer >= LENGTH(lst)) {
+            return new_error(interp, "nth: out of bound.\n");
+        }
+        for (int i = 0; i < REF(n)->integer; i++) {
+            lst = CDR(lst);
+        }
+        return CDR(lst);
+    } else {
+        return new_error(interp, "nth: type error.\n");
+    }
+}
+
 SExpRef builtin_string(Interp *interp, SExpRef args) {
     for (SExpRef i = args; !NILP(i); i = CDR(i)) {
         SExpRef x = CAR(i);

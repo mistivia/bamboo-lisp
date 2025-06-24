@@ -5,18 +5,18 @@
 (assert (= 2 (i/ 11 5)))
 (assert (= 1 (mod 11 5)))
 
-(assert (zerop 0))
-(assert (not (zerop 1)))
-(assert (not (zerop -1)))
+(assert (zero? 0))
+(assert (not (zero? 1)))
+(assert (not (zero? -1)))
 
-(assert (plusp 1))
-(assert (plusp 1.0))
-(assert (not (plusp 0)))
-(assert (not (plusp -1)))
+(assert (plus? 1))
+(assert (plus? 1.0))
+(assert (not (plus? 0)))
+(assert (not (plus? -1)))
 
-(assert (minusp -1))
-(assert (not (minusp 0)))
-(assert (not (minusp 1)))
+(assert (minus? -1))
+(assert (not (minus? 0)))
+(assert (not (minus? 1)))
 
 (assert (< 1 2))
 (assert (< 1.0 2))
