@@ -6,7 +6,7 @@
 (defun is-odd (x)
     (is-even (- x 1)))
 
-(assert (is-even 1024))
+(assert (is-even 2050))
 (assert (is-even 10))
 (assert (is-even 0))
 (assert (is-odd 1))
