@@ -64,7 +64,7 @@ SExpRef primitive_assert(Interp *interp, SExpRef args, bool istail) {
     if (LENGTH(args) != 1) {
         return new_error(interp, "assert: expect 1 arg.\n");
     }
-    if (TRUEP(CAR(eargs))) {
+    if (TRUEP(CAR(eargs)) && !CTL_FL(CAR(eargs))) {
         return interp->t;
     } else {
         const char *expstr = lisp_to_string(interp, CAR(args));

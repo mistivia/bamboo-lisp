@@ -1,5 +1,5 @@
-(assert (equal "abc" (string #\a #\b #\c)))
-(assert (equal "ABC" (string 65 66 67)))
+(assert (equal? "abc" (string #\a #\b #\c)))
+(assert (equal? "ABC" (string 65 66 67)))
 
 (assert (string= "abc" (string #\a #\b #\c)))
 (assert (string= "ABC" (string 65 66 67)))
@@ -25,5 +25,5 @@
 (assert (not (string> s1 s2)))
 
 (assert (string= "abc" (strip-string "\n\tabc \t\n")))
-(assert (equal ("a" "b" "c") (split-string "a,b,c" #\,)))
+(assert (equal? (list "a" "b" "c") (split-string "a,b,c" #\,)))
 

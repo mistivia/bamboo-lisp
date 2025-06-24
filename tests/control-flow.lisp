@@ -1,6 +1,6 @@
 (assert-error (if (error "") 1 2))
 
-(defmacro inmacro x (progn ,@x))
+(defmacro inmacro x `(progn ,@x))
 
 (let ((i 0))
   (while #t

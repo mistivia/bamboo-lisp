@@ -18,6 +18,7 @@
 (test-module macro)
 (test-module let-binding)
 (test-module string)
+(test-module list)
 
 (princ "\n\nTest with intensive GC:\n\n")
 (_alwaysgc #t)
