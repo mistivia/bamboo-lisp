@@ -19,7 +19,7 @@ SExpRef builtin_map(Interp *interp, SExpRef args) {
     for (SExpRef i = lst; !NILP(i); i = CDR(i)) {
         SExpRef x = CAR(i);
         PUSH_REG(newlst);
-        SExpRef newx = lisp_apply(interp, fn, CONS(x, NIL), false);
+        SExpRef newx = lisp_call(interp, fn, CONS(x, NIL));
         POP_REG();
         if (CTL_FL(newx)) return newx;
         newlst = CONS(newx, newlst);
@@ -40,7 +40,7 @@ SExpRef builtin_filter(Interp *interp, SExpRef args) {
     for (SExpRef i = lst; !NILP(i); i = CDR(i)) {
         SExpRef x = CAR(i);
         PUSH_REG(newlst);
-        SExpRef pred = lisp_apply(interp, fn, CONS(x, NIL), false);
+        SExpRef pred = lisp_call(interp, fn, CONS(x, NIL));
         POP_REG();
         if (CTL_FL(pred)) return pred;
         if (TRUEP(pred)) {
@@ -63,7 +63,7 @@ SExpRef builtin_remove(Interp *interp, SExpRef args) {
     for (SExpRef i = lst; !NILP(i); i = CDR(i)) {
         SExpRef x = CAR(i);
         PUSH_REG(newlst);
-        SExpRef pred = lisp_apply(interp, fn, CONS(x, NIL), false);
+        SExpRef pred = lisp_call(interp, fn, CONS(x, NIL));
         POP_REG();
         if (CTL_FL(pred)) return pred;
         if (!TRUEP(pred)) {
@@ -85,7 +85,7 @@ SExpRef builtin_count(Interp *interp, SExpRef args) {
     int count = 0;
     for (SExpRef i = lst; !NILP(i); i = CDR(i)) {
         SExpRef x = CAR(i);
-        SExpRef pred = lisp_apply(interp, fn, CONS(x, NIL), false);
+        SExpRef pred = lisp_call(interp, fn, CONS(x, NIL));
         if (CTL_FL(pred)) return pred;
         if (TRUEP(pred)) {
             count++;
@@ -105,7 +105,7 @@ SExpRef builtin_foreach(Interp *interp, SExpRef args) {
     }
     for (SExpRef i = lst; !NILP(i); i = CDR(i)) {
         SExpRef x = CAR(i);
-        SExpRef newx = lisp_apply(interp, fn, CONS(x, NIL), false);
+        SExpRef newx = lisp_call(interp, fn, CONS(x, NIL));
         if (CTL_FL(newx)) return newx;
     }
     return NIL;

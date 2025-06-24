@@ -481,7 +481,7 @@ const char* lisp_to_string(Interp *interp, SExpRef val) {
 SExpRef lisp_macroexpand1(Interp *interp, SExpRef macro, SExpRef args) {
     SExpRef fn = new_lambda(interp, REF(macro)->macro.args, REF(macro)->macro.body, interp->top_level);
     PUSH_REG(fn);
-    SExpRef ret = lisp_apply(interp, fn, args, false);
+    SExpRef ret = lisp_call(interp, fn, args);
     POP_REG();
     return ret;
 error:
@@ -691,6 +691,19 @@ static SExpRef build_function_env(Interp *interp, SExpRef func, SExpRef args) {
     return env;
 }
 
+SExpRef lisp_call(Interp *interp, SExpRef fn, SExpRef args) {
+    SExpRef ret = lisp_apply(interp, fn, args, false);
+    while (VALTYPE(ret) == kTailcallSExp) {
+        fn = REF(ret)->tailcall.fn;
+        args = REF(ret)->tailcall.args;
+        PUSH_REG(ret);
+        ret = lisp_apply(interp, fn, args, false);
+        POP_REG();
+        if (CTL_FL(ret)) break;
+    }
+    return ret;
+}
+
 SExpRef lisp_apply(Interp *interp, SExpRef fn, SExpRef args, bool istail) {
     if (interp->recursion_depth > 2048)
         return new_error(interp, "apply: stack overflow.\n");
@@ -733,14 +746,6 @@ end:
     }
     if (VALTYPE(ret) == kReturnSignal) {
         ret = REF(ret)->ret;
-    }
-    if (VALTYPE(ret) == kTailcallSExp && !istail) {
-        fn = REF(ret)->tailcall.fn;
-        args = REF(ret)->tailcall.args;
-        PUSH_REG(ret);
-        ret = lisp_apply(interp, fn, args, false);
-        POP_REG();
-        goto end;
     }
     interp->stack = CDR(interp->stack);
     interp->recursion_depth--;

@@ -88,6 +88,7 @@ void lisp_print(Interp *interp, SExpRef obj, FILE *fp);
 SExpRef lisp_lookup(Interp *interp, SExpRef name);
 SExpRef lisp_lookup_func(Interp *interp, SExpRef name);
 SExpRef lisp_apply(Interp *interp, SExpRef fn, SExpRef args, bool istail);
+SExpRef lisp_call(Interp *interp, SExpRef fn, SExpRef args);
 SExpRef lisp_cons(Interp *interp, SExpRef a, SExpRef b);
 SExpRef lisp_dup(Interp *interp, SExpRef arg);
 bool lisp_nilp(Interp *interp, SExpRef arg);
