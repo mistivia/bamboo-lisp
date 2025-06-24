@@ -6,6 +6,111 @@
 #include <float.h>
 #include <math.h>
 
+SExpRef builtin_map(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "map: wrong arg num.\n");
+    SExpRef fn = CAR(args), lst = CADR(args);
+    if (VALTYPE(fn) != kFuncSExp && VALTYPE(fn) != kUserFuncSExp) {
+        return new_error(interp, "map: type error.\n");
+    }
+    if (!lisp_check_list(interp, lst)) {
+        return new_error(interp, "map: type error.");
+    }
+    SExpRef newlst = NIL;
+    for (SExpRef i = lst; !NILP(i); i = CDR(i)) {
+        SExpRef x = CAR(i);
+        PUSH_REG(newlst);
+        SExpRef newx = lisp_apply(interp, fn, CONS(x, NIL), false);
+        POP_REG();
+        if (CTL_FL(newx)) return newx;
+        newlst = CONS(newx, newlst);
+    }
+    return lisp_nreverse(interp, newlst);
+}
+
+SExpRef builtin_filter(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "map: wrong arg num.\n");
+    SExpRef fn = CAR(args), lst = CADR(args);
+    if (VALTYPE(fn) != kFuncSExp && VALTYPE(fn) != kUserFuncSExp) {
+        return new_error(interp, "map: type error.\n");
+    }
+    if (!lisp_check_list(interp, lst)) {
+        return new_error(interp, "map: type error.");
+    }
+    SExpRef newlst = NIL;
+    for (SExpRef i = lst; !NILP(i); i = CDR(i)) {
+        SExpRef x = CAR(i);
+        PUSH_REG(newlst);
+        SExpRef pred = lisp_apply(interp, fn, CONS(x, NIL), false);
+        POP_REG();
+        if (CTL_FL(pred)) return pred;
+        if (TRUEP(pred)) {
+            newlst = CONS(pred, newlst);
+        }
+    }
+    return lisp_nreverse(interp, newlst);
+}
+
+SExpRef builtin_remove(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "remove: wrong arg num.\n");
+    SExpRef fn = CAR(args), lst = CADR(args);
+    if (VALTYPE(fn) != kFuncSExp && VALTYPE(fn) != kUserFuncSExp) {
+        return new_error(interp, "remove: type error.\n");
+    }
+    if (!lisp_check_list(interp, lst)) {
+        return new_error(interp, "remove: type error.");
+    }
+    SExpRef newlst = NIL;
+    for (SExpRef i = lst; !NILP(i); i = CDR(i)) {
+        SExpRef x = CAR(i);
+        PUSH_REG(newlst);
+        SExpRef pred = lisp_apply(interp, fn, CONS(x, NIL), false);
+        POP_REG();
+        if (CTL_FL(pred)) return pred;
+        if (!TRUEP(pred)) {
+            newlst = CONS(pred, newlst);
+        }
+    }
+    return lisp_nreverse(interp, newlst);
+}
+
+SExpRef builtin_count(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "count: wrong arg num.\n");
+    SExpRef fn = CAR(args), lst = CADR(args);
+    if (VALTYPE(fn) != kFuncSExp && VALTYPE(fn) != kUserFuncSExp) {
+        return new_error(interp, "count: type error.\n");
+    }
+    if (!lisp_check_list(interp, lst)) {
+        return new_error(interp, "count: type error.");
+    }
+    int count = 0;
+    for (SExpRef i = lst; !NILP(i); i = CDR(i)) {
+        SExpRef x = CAR(i);
+        SExpRef pred = lisp_apply(interp, fn, CONS(x, NIL), false);
+        if (CTL_FL(pred)) return pred;
+        if (TRUEP(pred)) {
+            count++;
+        }
+    }
+    return new_integer(interp, count);
+}
+
+SExpRef builtin_foreach(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "foreach: wrong arg num.\n");
+    SExpRef fn = CAR(args), lst = CADR(args);
+    if (VALTYPE(fn) != kFuncSExp && VALTYPE(fn) != kUserFuncSExp) {
+        return new_error(interp, "foreach: type error.\n");
+    }
+    if (!lisp_check_list(interp, lst)) {
+        return new_error(interp, "foreach: type error.");
+    }
+    for (SExpRef i = lst; !NILP(i); i = CDR(i)) {
+        SExpRef x = CAR(i);
+        SExpRef newx = lisp_apply(interp, fn, CONS(x, NIL), false);
+        if (CTL_FL(newx)) return newx;
+    }
+    return NIL;
+}
+
 SExpRef builtin_set_car(Interp *interp, SExpRef args) {
     if (LENGTH(args) != 2) {
         return new_error(interp, "set-car: args num error.\n");

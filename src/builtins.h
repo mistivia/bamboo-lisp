@@ -3,6 +3,11 @@
 
 #include "interp.h"
 
+SExpRef builtin_map(Interp *interp, SExpRef args);
+SExpRef builtin_filter(Interp *interp, SExpRef args);
+SExpRef builtin_remove(Interp *interp, SExpRef args);
+SExpRef builtin_count(Interp *interp, SExpRef args);
+SExpRef builtin_foreach(Interp *interp, SExpRef args);
 SExpRef builtin_set_car(Interp *interp, SExpRef args);
 SExpRef builtin_set_cdr(Interp *interp, SExpRef args);
 SExpRef builtin_length(Interp *interp, SExpRef args);

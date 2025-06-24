@@ -88,6 +88,11 @@ void Interp_init(Interp *self) {
     Interp_add_primitive(self, "assert-error", primitive_assert_error);
     Interp_add_primitive(self, "load", primitive_load);
 
+    Interp_add_userfunc(self, "map", builtin_map);
+    Interp_add_userfunc(self, "filter", builtin_filter);
+    Interp_add_userfunc(self, "remove", builtin_remove);
+    Interp_add_userfunc(self, "count", builtin_count);
+    Interp_add_userfunc(self, "foreach", builtin_foreach);
     Interp_add_userfunc(self, "symbol->string", builtin_symbol2string);
     Interp_add_userfunc(self, "intern", builtin_intern);
     Interp_add_userfunc(self, "gensym", builtin_gensym);
@@ -478,13 +483,6 @@ SExpRef lisp_macroexpand1(Interp *interp, SExpRef macro, SExpRef args) {
     PUSH_REG(fn);
     SExpRef ret = lisp_apply(interp, fn, args, false);
     POP_REG();
-    while (VALTYPE(ret) == kTailcallSExp) {
-        fn = REF(ret)->tailcall.fn;
-        args = REF(ret)->tailcall.args;
-        PUSH_REG(ret);
-        ret = lisp_apply(interp, fn, args, false);
-        POP_REG();
-    }
     return ret;
 error:
     return new_error(interp, "macroexpand: syntax error.\n");
@@ -735,6 +733,14 @@ end:
     }
     if (VALTYPE(ret) == kReturnSignal) {
         ret = REF(ret)->ret;
+    }
+    if (VALTYPE(ret) == kTailcallSExp && !istail) {
+        fn = REF(ret)->tailcall.fn;
+        args = REF(ret)->tailcall.args;
+        PUSH_REG(ret);
+        ret = lisp_apply(interp, fn, args, false);
+        POP_REG();
+        goto end;
     }
     interp->stack = CDR(interp->stack);
     interp->recursion_depth--;

@@ -75,6 +75,14 @@ typedef enum {
     kTailcallSExp,
 } SExpType;
 
+VECTOR_DEF(SExpRef);
+
+typedef struct {
+    SExpRef type;
+    void (*free)(void *self);
+    void (*gcmark)(SExpRefVector *gcstack, void *self);
+} LispUserdataMeta;
+
 struct sexp {
     bool marked;
     SExpType type;
@@ -84,7 +92,10 @@ struct sexp {
         bool boolean;
         char character;
         const char *str;
-        const void *userdata;
+        struct {
+            const void *userdata;
+            LispUserdataMeta *userdata_meta;
+        };
         SExpPair pair;
         SExpFunc func;
         LispUserFunc userfunc;
@@ -101,7 +112,6 @@ void SExp_show(SExp self, FILE* fp);
 void SExpRef_show(SExpRef self, FILE* fp);
 
 VECTOR_DEF(SExp);
-VECTOR_DEF(SExpRef);
 
 #endif
 
