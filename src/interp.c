@@ -478,6 +478,13 @@ SExpRef lisp_macroexpand1(Interp *interp, SExpRef macro, SExpRef args) {
     PUSH_REG(fn);
     SExpRef ret = lisp_apply(interp, fn, args, false);
     POP_REG();
+    while (VALTYPE(ret) == kTailcallSExp) {
+        fn = REF(ret)->tailcall.fn;
+        args = REF(ret)->tailcall.args;
+        PUSH_REG(ret);
+        ret = lisp_apply(interp, fn, args, false);
+        POP_REG();
+    }
     return ret;
 error:
     return new_error(interp, "macroexpand: syntax error.\n");
@@ -733,6 +740,7 @@ end:
     interp->recursion_depth--;
     return ret;
 }
+
 
 SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
     if (interp->recursion_depth > 2048) {

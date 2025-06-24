@@ -198,6 +198,11 @@ SExpRef primitive_let(Interp *interp, SExpRef args, bool istail) {
     }
 
     body = CDR(args);
+    if (istail) {
+        SExpRef closure = new_lambda(interp, NIL, body, env);
+        ret = new_tailcall(interp, closure, NIL);
+        goto end;
+    }
     iter = body;
     while (!NILP(iter)) {
         exp = CAR(iter);
