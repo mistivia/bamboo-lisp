@@ -157,6 +157,17 @@ void Interp_init(Interp *self) {
     Interp_add_userfunc(self, "length", builtin_length);
     Interp_add_userfunc(self, "nth", builtin_nth);
     Interp_add_userfunc(self, "nthcdr", builtin_nthcdr);
+    Interp_add_userfunc(self, "list?", builtin_listp);
+    Interp_add_userfunc(self, "cons?", builtin_consp);
+    Interp_add_userfunc(self, "atom?", builtin_atomp);
+    Interp_add_userfunc(self, "null?", builtin_nullp);
+    Interp_add_userfunc(self, "member?", builtin_memberp);
+    Interp_add_userfunc(self, "number?", builtin_numberp);
+    Interp_add_userfunc(self, "integer?", builtin_integerp);
+    Interp_add_userfunc(self, "float?", builtin_floatp);
+    Interp_add_userfunc(self, "nreverse", builtin_nreverse);
+    Interp_add_userfunc(self, "reverse", builtin_reverse);
+    Interp_add_userfunc(self, "last", builtin_last);
 
     Interp_add_userfunc(self, "_gcstat", builtin_gcstat);
     Interp_add_userfunc(self, "_alwaysgc", builtin_alwaysgc);

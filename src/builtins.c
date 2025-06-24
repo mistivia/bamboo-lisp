@@ -6,6 +6,108 @@
 #include <float.h>
 #include <math.h>
 
+SExpRef builtin_listp(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "list?: arg num error.\n");
+    return new_boolean(interp, lisp_check_list(interp, CAR(args)));
+}    
+
+SExpRef builtin_consp(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "cons?: arg num error.\n");
+    return new_boolean(interp, REF(CAR(args))->type == kPairSExp);
+}
+
+SExpRef builtin_atomp(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "atom?: arg num error.\n");
+    bool ret = false;
+    SExpType type = REF(CAR(args))->type;
+    if (type == kRealSExp) ret = true;
+    if (type == kIntegerSExp) ret = true;
+    if (type == kStringSExp) ret = true;
+    if (type == kSymbolSExp) ret = true;
+    if (type == kCharSExp) ret = true;
+    if (type == kBooleanSExp) ret = true;
+    if (type == kNilSExp) ret = true;
+    if (type == kFuncSExp) ret = true;
+    if (type == kUserFuncSExp) ret = true;
+    return new_boolean(interp, ret);
+}
+SExpRef builtin_nullp(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "null?: arg num error.\n");
+    return new_boolean(interp, REF(CAR(args))->type == kNilSExp);
+}
+
+SExpRef builtin_numberp(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "number?: arg num error.\n");
+    return new_boolean(interp, REF(CAR(args))->type == kIntegerSExp
+                                || REF(CAR(args))->type == kRealSExp);
+}
+
+SExpRef builtin_integerp(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "integer?: arg num error.\n");
+    return new_boolean(interp, REF(CAR(args))->type == kNilSExp);
+}
+
+SExpRef builtin_floatp(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "float?: arg num error.\n");
+    return new_boolean(interp, REF(CAR(args))->type == kRealSExp);
+}
+
+SExpRef builtin_nreverse(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "number?: arg num error.\n");
+    SExpRef lst = CAR(args);
+    if (lisp_check_list(interp, lst)) {
+        return lisp_nreverse(interp, lst);        
+    }
+    return new_error(interp, "nreverse: type error.\n");
+}
+
+SExpRef builtin_reverse(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "number?: arg num error.\n");
+    SExpRef lst = CAR(args);
+    if (lisp_check_list(interp, lst)) {
+        return lisp_reverse(interp, lst);        
+    }
+    return new_error(interp, "nreverse: type error.\n");
+}
+
+SExpRef builtin_last(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) {
+        return new_error(interp, "last: arg num error.\n");
+    }
+    SExpRef lst = CAR(args);
+    if (NILP(lst)) {
+        return new_error(interp, "last: empty list.\n");
+    }
+    if (!lisp_check_list(interp, lst)) {
+        return new_error(interp, "last: type error.\n");
+    }
+    for (SExpRef i = lst; !NILP(i); i = CDR(i)) {
+        if (NILP(CDR(i))) {
+            return CAR(i);
+        }
+    }
+    return NIL;
+}
+
+static bool equal_impl(Interp *interp, SExpRef x, SExpRef y);
+
+SExpRef builtin_memberp(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) {
+        return new_error(interp, "member?: arg num error.\n");
+    }
+    SExpRef elem = CAR(args), lst = CADR(args);
+    if (!lisp_check_list(interp, lst)) {
+        return new_error(interp, "member?: type error.\n");
+    }
+    for (SExpRef i = lst; !NILP(i); i = CDR(i)) {
+        SExpRef x = CAR(i);
+        if (equal_impl(interp, x, elem)) {
+            return interp->t;
+        }
+    }
+    return interp->f;
+}
+
 SExpRef builtin_map(Interp *interp, SExpRef args) {
     if (LENGTH(args) != 2) return new_error(interp, "map: wrong arg num.\n");
     SExpRef fn = CAR(args), lst = CADR(args);

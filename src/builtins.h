@@ -3,6 +3,17 @@
 
 #include "interp.h"
 
+SExpRef builtin_listp(Interp *interp, SExpRef args);
+SExpRef builtin_consp(Interp *interp, SExpRef args);
+SExpRef builtin_atomp(Interp *interp, SExpRef args);
+SExpRef builtin_nullp(Interp *interp, SExpRef args);
+SExpRef builtin_memberp(Interp *interp, SExpRef args);
+SExpRef builtin_numberp(Interp *interp, SExpRef args);
+SExpRef builtin_integerp(Interp *interp, SExpRef args);
+SExpRef builtin_floatp(Interp *interp, SExpRef args);
+SExpRef builtin_nreverse(Interp *interp, SExpRef args);
+SExpRef builtin_reverse(Interp *interp, SExpRef args);
+SExpRef builtin_last(Interp *interp, SExpRef args);
 SExpRef builtin_map(Interp *interp, SExpRef args);
 SExpRef builtin_filter(Interp *interp, SExpRef args);
 SExpRef builtin_remove(Interp *interp, SExpRef args);
