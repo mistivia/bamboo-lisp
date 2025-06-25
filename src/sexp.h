@@ -10,7 +10,7 @@ struct sexp;
 typedef struct sexp SExp;
 
 typedef struct {
-    int idx;
+    int32_t idx;
 } SExpRef;
 
 typedef struct {

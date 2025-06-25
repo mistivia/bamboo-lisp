@@ -14,8 +14,30 @@
 
 #define BUFSIZE 1024
 
-void TopBinding_show(TopBinding self, FILE *fp) { }
-VECTOR_IMPL(TopBinding);
+bool SExpRef_eq(SExpRef a, SExpRef b) {
+    return a.idx == b.idx;
+}
+
+uint64_t SExpRef_hash(SExpRef s) {
+    // FNV-1a 64-bit hash
+    uint32_t idx = s.idx;
+    uint8_t byte0 = idx & 0xff;
+    uint8_t byte1 = (idx >> 8) & 0xff;
+    uint8_t byte2 = (idx >> 16) & 0xff;
+    uint8_t byte3 = (idx >> 24) & 0xff;
+    uint64_t hash = 14695981039346656037ULL;    
+    hash = hash ^ byte0;
+    hash = hash * 1099511628211ULL;
+    hash = hash ^ byte1;
+    hash = hash * 1099511628211ULL;
+    hash = hash ^ byte2;
+    hash = hash * 1099511628211ULL;
+    hash = hash ^ byte3;
+    hash = hash * 1099511628211ULL;
+    return hash;
+}
+
+HASH_TABLE_IMPL(SExpRef, SExpRef);
 
 #define UNBOUND ((SExpRef){-1})
 
@@ -28,7 +50,7 @@ void Interp_init(Interp *self) {
     self->errmsg_buf = malloc(BUFSIZE);
     SExpVector_init(&self->objs);
     IntVector_init(&self->empty_space);
-    TopBindingVector_init(&self->topbindings);
+    SExpRef2SExpRefHashTable_init(&self->topbindings);
     String2IntHashTable_init(&self->symbols);
     int i = 0;
     SExp sexp;
@@ -271,7 +293,7 @@ void Interp_free(Interp *self) {
     String2IntHashTable_free(&self->symbols);
     SExpVector_free(&self->objs);
     IntVector_free(&self->empty_space);
-    TopBindingVector_free(&self->topbindings);
+    SExpRef2SExpRefHashTable_free(&self->topbindings);
     free(self->errmsg_buf);
     Parser_free(self->parser);
     free(self->parser);
@@ -526,7 +548,7 @@ void lisp_defun(Interp *interp, SExpRef name, SExpRef val) {
     REF(newbinding)->binding.value = UNBOUND;
     REF(newbinding)->binding.next = binding;
     REF(interp->top_level)->env.bindings = newbinding;
-    TopBindingVector_push_back(&interp->topbindings, (TopBinding){name, newbinding});
+    SExpRef2SExpRefHashTable_insert(&interp->topbindings, name, newbinding);
 }
 
 void lisp_defvar(Interp *interp, SExpRef name, SExpRef val) {
@@ -544,7 +566,7 @@ void lisp_defvar(Interp *interp, SExpRef name, SExpRef val) {
     REF(newbinding)->binding.value = val;
     REF(newbinding)->binding.next = binding;
     REF(interp->top_level)->env.bindings = newbinding;
-    TopBindingVector_push_back(&interp->topbindings, (TopBinding){name, newbinding});
+    SExpRef2SExpRefHashTable_insert(&interp->topbindings, name, newbinding);
 }
 
 SExpRef lisp_setq(Interp *interp, SExpRef name, SExpRef val) {
@@ -593,29 +615,21 @@ void lisp_print(Interp *interp, SExpRef obj, FILE *fp) {
 }
 
 SExpRef lisp_lookup_topvar(Interp *interp, SExpRef name) {
-    int topbindings_len = TopBindingVector_len(&interp->topbindings);
-    for (int i = 0; i < topbindings_len; i++) {
-        TopBinding topbinding = interp->topbindings.buffer[i];
-        if (topbinding.name.idx == name.idx) {
-            SExpRef ret = REF(topbinding.binding)->binding.value;
-            if (ret.idx < 0) goto notfound;
-            return ret;
-        }
-    }
+    SExpRef *pbinding = SExpRef2SExpRefHashTable_get(&interp->topbindings, name);
+    if (pbinding == NULL) goto notfound;
+    SExpRef ret = REF(*pbinding)->binding.value;
+    if (ret.idx < 0) goto notfound;
+    return ret;
 notfound:
     return new_error(interp, "Unbound variable: %s.\n", REF(name)->str);
 }
 
 SExpRef lisp_lookup_func(Interp *interp, SExpRef name) {
-    int topbindings_len = TopBindingVector_len(&interp->topbindings);
-    for (int i = 0; i < topbindings_len; i++) {
-        TopBinding topbinding = interp->topbindings.buffer[i];
-        if (topbinding.name.idx == name.idx) {
-            SExpRef ret = REF(topbinding.binding)->binding.func;
-            if (ret.idx < 0) goto notfound;
-            return ret;
-        }
-    }
+    SExpRef *pbinding = SExpRef2SExpRefHashTable_get(&interp->topbindings, name);
+    if (pbinding == NULL) goto notfound;
+    SExpRef ret = REF(*pbinding)->binding.func;
+    if (ret.idx < 0) goto notfound;
+    return ret;
 notfound:
     return new_error(interp, "Unbound function: %s.\n", REF(name)->str);
 }
