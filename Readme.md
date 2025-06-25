@@ -6,7 +6,7 @@ Embeddable & Hackable Lisp-2 Interpreter
 
 - Lisp-2 (more like Common Lisp or Emacs Lisp)
 - Lexical scoping
-- < 3000 LOC 
+- The interpreter part is ~2500 LOC (excluding built-in functions)
 - Tail call optimization
 - Any C99 compiler should work
 - Depends only on C standard library
