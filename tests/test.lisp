@@ -20,6 +20,7 @@
 (test-module string)
 (test-module list)
 (test-module type)
+(test-module char)
 
 (princ "\n\nTest with intensive GC:\n\n")
 (_alwaysgc #t)
@@ -39,5 +40,6 @@
 (test-module string)
 (test-module list)
 (test-module type)
+(test-module char)
 
 (exit)

@@ -2,9 +2,107 @@
 #include "interp.h"
 #include "sexp.h"
 #include <algds/str.h>
+#include <ctype.h>
 #include <stdint.h>
 #include <float.h>
 #include <math.h>
+
+SExpRef builtin_charp(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "char?: arg num error.");
+    return new_boolean(interp, VALTYPE(CAR(args)) == kCharSExp);
+}
+
+SExpRef builtin_char_eq(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "char=: arg num error.");
+    if (VALTYPE(CAR(args)) != kCharSExp || VALTYPE(CADR(args)) != kCharSExp) {
+        return new_error(interp, "char=: type error.\n");
+    }
+    char a = REF(CAR(args))->character;
+    char b = REF(CADR(args))->character;
+    return new_boolean(interp, a == b);
+}
+
+SExpRef builtin_char_gt(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "char>: arg num error.");
+    if (VALTYPE(CAR(args)) != kCharSExp || VALTYPE(CADR(args)) != kCharSExp) {
+        return new_error(interp, "char>: type error.\n");
+    }
+    char a = REF(CAR(args))->character;
+    char b = REF(CADR(args))->character;
+    return new_boolean(interp, a > b);
+}
+
+SExpRef builtin_char_lt(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "char<: arg num error.");
+    if (VALTYPE(CAR(args)) != kCharSExp || VALTYPE(CADR(args)) != kCharSExp) {
+        return new_error(interp, "char<: type error.\n");
+    }
+    char a = REF(CAR(args))->character;
+    char b = REF(CADR(args))->character;
+    return new_boolean(interp, a < b);
+}
+#undef FUNC
+
+SExpRef builtin_char_ge(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "char>=: arg num error.");
+    if (VALTYPE(CAR(args)) != kCharSExp || VALTYPE(CADR(args)) != kCharSExp) {
+        return new_error(interp, "char>=: type error.\n");
+    }
+    char a = REF(CAR(args))->character;
+    char b = REF(CADR(args))->character;
+    return new_boolean(interp, a >= b);
+}
+
+SExpRef builtin_char_le(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "char<=: arg num error.\n");
+    if (VALTYPE(CAR(args)) != kCharSExp || VALTYPE(CADR(args)) != kCharSExp) {
+        return new_error(interp, "char<=: type error.\n");
+    }
+    char a = REF(CAR(args))->character;
+    char b = REF(CADR(args))->character;
+    return new_boolean(interp, a <= b);
+}
+#undef FUNC
+
+SExpRef builtin_char_neq(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "char/=: arg num error.\n");
+    if (VALTYPE(CAR(args)) != kCharSExp || VALTYPE(CADR(args)) != kCharSExp) {
+        return new_error(interp, "char/=: type error.\n");
+    }
+    char a = REF(CAR(args))->character;
+    char b = REF(CADR(args))->character;
+    return new_boolean(interp, a != b);
+}
+
+SExpRef builtin_char2int(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "char->int: arg num error.\n");
+    if (VALTYPE(CAR(args)) != kCharSExp) return new_error(interp, "char->int: type error.\n");
+    return new_integer(interp, REF(CAR(args))->character);
+}
+
+SExpRef builtin_int2char(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "int->char: arg num error.\n");
+    if (VALTYPE(CAR(args)) != kIntegerSExp) return new_error(interp, "int->char: type error.\n");
+    return new_char(interp, REF(CAR(args))->integer);
+}
+
+SExpRef builtin_alphabeticp(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "alphabetic?: arg num error.\n");
+    if (VALTYPE(CAR(args)) != kCharSExp) return new_error(interp, "alphabetic?: type error.\n");
+    return new_boolean(interp, isalpha(REF(CAR(args))->character));
+}
+
+SExpRef builtin_numericp(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "numeric?: arg num error.\n");
+    if (VALTYPE(CAR(args)) != kCharSExp) return new_error(interp, "numeric?: type error.\n");
+    return new_boolean(interp, isdigit(REF(CAR(args))->character));
+}
+
+SExpRef builtin_alphanump(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "alphanum?: arg num error.\n");
+    if (VALTYPE(CAR(args)) != kCharSExp) return new_error(interp, "alphanum?: type error.\n");
+    return new_boolean(interp, isalnum(REF(CAR(args))->character));
+}
 
 SExpRef builtin_listp(Interp *interp, SExpRef args) {
     if (LENGTH(args) != 1) return new_error(interp, "list?: arg num error.\n");

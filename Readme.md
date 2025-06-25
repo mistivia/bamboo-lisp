@@ -20,7 +20,7 @@ Embeddable & Hackable Lisp-2 Interpreter
 
 ## Drawbacks
 
-To keep simplicity, Bamboo Lisp is a VERY SLOW tree-walking interpreter. The performance is similar to other small Lisp interpreters like TinyScheme or very early Emacs Lisp, which is only 1/5 to 1/10 that of Python.
+To keep simplicity, Bamboo Lisp is a VERY SLOW tree-walking interpreter. The performance is similar to other small Lisp interpreters like TinyScheme or very early Emacs Lisp, which is only 1/5 to 1/10 that of modern Python.
 
 ## Build
 

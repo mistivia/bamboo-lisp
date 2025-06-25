@@ -168,6 +168,18 @@ void Interp_init(Interp *self) {
     Interp_add_userfunc(self, "nreverse", builtin_nreverse);
     Interp_add_userfunc(self, "reverse", builtin_reverse);
     Interp_add_userfunc(self, "last", builtin_last);
+    Interp_add_userfunc(self, "char?", builtin_charp);
+    Interp_add_userfunc(self, "char=", builtin_char_eq);
+    Interp_add_userfunc(self, "char>", builtin_char_gt);
+    Interp_add_userfunc(self, "char<", builtin_char_lt);
+    Interp_add_userfunc(self, "char>=", builtin_char_ge);
+    Interp_add_userfunc(self, "char<=", builtin_char_le);
+    Interp_add_userfunc(self, "char/=", builtin_char_neq);
+    Interp_add_userfunc(self, "int->char", builtin_int2char);
+    Interp_add_userfunc(self, "char->int", builtin_char2int);
+    Interp_add_userfunc(self, "alphabetic?", builtin_alphabeticp);
+    Interp_add_userfunc(self, "numeric?", builtin_numericp);
+    Interp_add_userfunc(self, "alphanum?", builtin_alphanump);
 
     Interp_add_userfunc(self, "_gcstat", builtin_gcstat);
     Interp_add_userfunc(self, "_alwaysgc", builtin_alwaysgc);
