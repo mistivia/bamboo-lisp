@@ -3,6 +3,18 @@
 
 #include "interp.h"
 
+SExpRef builtin_charp(Interp *interp, SExpRef args);
+SExpRef builtin_char_eq(Interp *interp, SExpRef args);
+SExpRef builtin_char_gt(Interp *interp, SExpRef args);
+SExpRef builtin_char_lt(Interp *interp, SExpRef args);
+SExpRef builtin_char_ge(Interp *interp, SExpRef args);
+SExpRef builtin_char_le(Interp *interp, SExpRef args);
+SExpRef builtin_char_neq(Interp *interp, SExpRef args);
+SExpRef builtin_int2char(Interp *interp, SExpRef args);
+SExpRef builtin_char2int(Interp *interp, SExpRef args);
+SExpRef builtin_alphabeticp(Interp *interp, SExpRef args);
+SExpRef builtin_numericp(Interp *interp, SExpRef args);
+SExpRef builtin_alphanump(Interp *interp, SExpRef args);
 SExpRef builtin_listp(Interp *interp, SExpRef args);
 SExpRef builtin_consp(Interp *interp, SExpRef args);
 SExpRef builtin_atomp(Interp *interp, SExpRef args);

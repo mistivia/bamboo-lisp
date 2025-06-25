@@ -22,3 +22,17 @@
   `(if ,pred
      nil
      (progn ,@body)))
+
+(defun caar (x) (car (car x)))
+(defun cadr (x) (car (cdr x)))
+(defun cddr (x) (cdr (cdr x)))
+(defun cdar (x) (cdr (car x)))
+
+(defun caaar (x) (car (caar x)))
+(defun cadar (x) (car (cdar x)))
+(defun cddar (x) (cdr (cdar x)))
+(defun cdaar (x) (cdr (caar x)))
+(defun caadr (x) (car (cadr x)))
+(defun caddr (x) (car (cddr x)))
+(defun cdddr (x) (cdr (cddr x)))
+(defun cdadr (x) (cdr (cadr x)))

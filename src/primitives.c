@@ -207,7 +207,7 @@ SExpRef primitive_let(Interp *interp, SExpRef args, bool istail) {
     while (!NILP(iter)) {
         exp = CAR(iter);
         if (NILP(CDR(iter))) {
-            ret = lisp_eval(interp, exp, istail);
+            ret = lisp_eval(interp, exp, true);
             goto end;
         } else {
             ret = EVAL(exp);
