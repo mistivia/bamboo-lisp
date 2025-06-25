@@ -14,16 +14,11 @@ typedef struct parser Parser;
 struct interp;
 typedef struct interp Interp;
 
-typedef struct {
-    SExpRef name;
-    SExpRef binding;
-} TopBinding;
-
-VECTOR_DEF(TopBinding);
+HASH_TABLE_DEF(SExpRef, SExpRef);
 
 struct interp {
     SExpVector objs;
-    TopBindingVector topbindings;
+    SExpRef2SExpRefHashTable topbindings;
     IntVector empty_space;
     String2IntHashTable symbols;
     SExpRef stack;
