@@ -60,6 +60,7 @@
                 const inputPtr = Module._malloc(inputLength + 1);
                 Module.stringToUTF8(input, inputPtr, inputLength + 1);
                 const result = Module._Interp_eval_string(interp, inputPtr);
+                Module._print_lisp_error(interp, result);
                 const resultPtr = Module._lisp_to_string(interp, result);
                 const resultString = Module.UTF8ToString(resultPtr);
                 Module._free(inputPtr);

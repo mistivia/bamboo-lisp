@@ -4394,6 +4394,7 @@ var _free = Module['_free'] = makeInvalidEarlyAccess('_free');
 var _malloc = Module['_malloc'] = makeInvalidEarlyAccess('_malloc');
 var _new_interp = Module['_new_interp'] = makeInvalidEarlyAccess('_new_interp');
 var _Interp_eval_string = Module['_Interp_eval_string'] = makeInvalidEarlyAccess('_Interp_eval_string');
+var _print_lisp_error = Module['_print_lisp_error'] = makeInvalidEarlyAccess('_print_lisp_error');
 var _fflush = makeInvalidEarlyAccess('_fflush');
 var _emscripten_stack_get_end = makeInvalidEarlyAccess('_emscripten_stack_get_end');
 var _emscripten_stack_get_base = makeInvalidEarlyAccess('_emscripten_stack_get_base');
@@ -4410,6 +4411,7 @@ function assignWasmExports(wasmExports) {
   Module['_malloc'] = _malloc = createExportWrapper('malloc', 1);
   Module['_new_interp'] = _new_interp = createExportWrapper('new_interp', 0);
   Module['_Interp_eval_string'] = _Interp_eval_string = createExportWrapper('Interp_eval_string', 2);
+  Module['_print_lisp_error'] = _print_lisp_error = createExportWrapper('print_lisp_error', 2);
   _fflush = createExportWrapper('fflush', 1);
   _emscripten_stack_get_end = wasmExports['emscripten_stack_get_end'];
   _emscripten_stack_get_base = wasmExports['emscripten_stack_get_base'];
