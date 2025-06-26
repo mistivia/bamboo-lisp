@@ -41,6 +41,19 @@ HASH_TABLE_IMPL(SExpRef, SExpRef);
 
 #define UNBOUND ((SExpRef){-1})
 
+// for wasm
+Interp *new_interp() {
+    Interp *ret = malloc(sizeof(Interp));
+    Interp_init(ret);
+    return ret;
+}
+
+// for wasm
+void print_lisp_error(Interp *interp, SExpRef err) {
+    if (VALTYPE(err) != kErrSignal) return;
+    fprintf(stderr, "Error: %s", REF(err)->str);
+}
+
 void Interp_init(Interp *self) {
     self->recursion_depth = 0;
     self->gensym_cnt = 42;
@@ -212,6 +225,7 @@ void Interp_init(Interp *self) {
         fprintf(stderr, "Failed to load prelude: %s", REF(ret)->str);
     }   
 }
+
 
 SExpRef Interp_eval_string(Interp *interp, const char * str) {
     Parser_set_string(interp->parser, str);

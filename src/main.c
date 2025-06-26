@@ -24,16 +24,26 @@ int main(int argc, char **argv) {
             mainret = -1; goto end;
         }
     }
+#ifdef WITHREADLINE
     Parser_set_readline(interp.parser);
+#else
+    Parser_set_file(interp.parser, stdin);
+#endif
     SExpRef sexp, res;
     ParseResult parse_result;
     while (1) {
+#ifndef WITHREADLINE
+        printf(">>> ");
+        fflush(stdout);
+#endif
         parse_result = parse_sexp(interp.parser);
         if (parse_result.errmsg != NULL) {
             if (Parser_peek(interp.parser) == EOF) goto end;
             fprintf(stderr, "Parsing error: %s", parse_result.errmsg);
+#ifdef WITHREADLINE
             free((void*)interp.parser->string);
             Parser_set_readline(interp.parser);
+#endif
             continue;
         }
 
