@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bamboo Lisp</title>
+    <style>
+        body {
+            font-family: monospace;
+        }
+        textarea {
+            font-size: 16px;
+        }
+        button {
+            font-size: 16px;
+        }
+        #output {
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Bamboo Lisp</h1>
+        <pre id="output"></pre>
+        <textarea rows="3" cols="60" id="lispInput" placeholder="Input Lisp expression..."></textarea>
+        <br>
+        <button id="evalButton">Run (Ctrl+Enter)</button>
+    </div>
+    <script>
+        var Module = {};
+        Module.print = function(text) {
+            document.getElementById('output').innerText += text + '\n';
+        };
+        Module.printErr = function(text) {
+            document.getElementById('output').innerText += text + '\n';
+        };
+        Module.onRuntimeInitialized = () => {
+            interp = Module._new_interp();
+        };
+    </script>
+    <script src="web-bamboo-lisp.js"></script>
+    <script>
+        let interp;
+
+        function evaluateLisp() {
+            if (!interp) {
+                return;
+            }
+            const input = document.getElementById('lispInput').value;
+            if (!input.trim()) {
+                return;
+            }
+            try {
+                document.getElementById('output').innerText += `${input}\n`;
+                document.getElementById('lispInput').value = '';
+                const textEncoder = new TextEncoder();
+                const encodedInput = textEncoder.encode(input);
+                const inputLength = encodedInput.length;
+                const inputPtr = Module._malloc(inputLength + 1);
+                Module.stringToUTF8(input, inputPtr, inputLength + 1);
+                const result = Module._Interp_eval_string(interp, inputPtr);
+                const resultPtr = Module._lisp_to_string(interp, result);
+                const resultString = Module.UTF8ToString(resultPtr);
+                Module._free(inputPtr);
+                Module._free(resultPtr);
+                document.getElementById('output').innerText += `▶ ${resultString}\n\n`;
+            } catch (error) {
+                document.getElementById('output').innerText = `Error: ${error.message}`;
+            }
+        }
+
+        document.addEventListener('keydown', function(event) {
+            if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                event.preventDefault();
+                evaluateLisp();
+            }
+        });
+
+        document.getElementById('evalButton').addEventListener('click', evaluateLisp);
+    </script>
+</body>
+</html>
