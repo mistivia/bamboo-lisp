@@ -22,10 +22,12 @@
 <body>
     <div class="container">
         <h1>Bamboo Lisp</h1>
+        <p><a href="https://github.com/mistivia/bamboo-lisp">GitHub</a></p>
         <pre id="output"></pre>
         <textarea rows="3" cols="60" id="lispInput" placeholder="Input Lisp expression..."></textarea>
         <br>
         <button id="evalButton">Run (Ctrl+Enter)</button>
+        <button id="clearButton">Clear</button>
     </div>
     <script>
         var Module = {};
@@ -52,7 +54,7 @@
                 return;
             }
             try {
-                document.getElementById('output').innerText += `${input}\n`;
+                document.getElementById('output').innerText += input+ '\n';
                 document.getElementById('lispInput').value = '';
                 const textEncoder = new TextEncoder();
                 const encodedInput = textEncoder.encode(input);
@@ -65,9 +67,10 @@
                 const resultString = Module.UTF8ToString(resultPtr);
                 Module._free(inputPtr);
                 Module._free(resultPtr);
-                document.getElementById('output').innerText += `▶ ${resultString}\n\n`;
+                document.getElementById('output').innerText += '▶ ' + resultString + '\n\n';
+                window.scrollTo(0, document.body.scrollHeight);
             } catch (error) {
-                document.getElementById('output').innerText = `Error: ${error.message}`;
+                document.getElementById('output').innerText = 'Error:' + error.message;
             }
         }
 
@@ -78,7 +81,12 @@
             }
         });
 
+        function clearOutput() {
+            document.getElementById('output').innerText = '';
+        }
+
         document.getElementById('evalButton').addEventListener('click', evaluateLisp);
+        document.getElementById('clearButton').addEventListener('click', clearOutput);
     </script>
 </body>
 </html>
