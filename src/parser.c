@@ -4,8 +4,10 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
+#ifdef WITHREADLINE
 #include <readline/readline.h>
 #include <readline/history.h>
+#endif
 
 #include "sexp.h"
 
@@ -83,6 +85,7 @@ void Parser_set_file(Parser *parser, FILE *fp) {
     parser->fp = fp;
 }
 
+#ifdef WITHREADLINE
 void Parser_set_readline(Parser *parser) {
     stifle_history(100);
     parser->parse_type = kParseReadline;
@@ -90,6 +93,7 @@ void Parser_set_readline(Parser *parser) {
     parser->str_cursor = NULL;
     parser->readline_eof = false;
 }
+#endif
 
 
 int Parser_getchar(Parser *ctx) {
@@ -100,6 +104,7 @@ int Parser_getchar(Parser *ctx) {
         return ret;
     } else if (ctx->parse_type == kParseFile) {
         return fgetc(ctx->fp);
+#ifdef WITHREADLINE
     } else if (ctx->parse_type == kParseReadline) {
         if (ctx->readline_eof) return EOF;
         if (ctx->string == NULL) {
@@ -127,6 +132,7 @@ int Parser_getchar(Parser *ctx) {
         int c = *ctx->str_cursor;
         ctx->str_cursor++;
         return c;
+#endif
     }
     return EOF;
 }
@@ -141,6 +147,7 @@ int Parser_peek(Parser *ctx) {
         if (ret == EOF) return EOF;
         ungetc(ret, ctx->fp);
         return ret;
+#ifdef WITHREADLINE
     } else if (ctx->parse_type == kParseReadline) {
         if (ctx->readline_eof) return EOF;
         if (ctx->string == NULL) {
@@ -158,6 +165,7 @@ int Parser_peek(Parser *ctx) {
         }
         int c = *ctx->str_cursor;
         return c;
+#endif
     }
     return EOF;
 }

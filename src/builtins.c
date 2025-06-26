@@ -8,12 +8,12 @@
 #include <math.h>
 
 SExpRef builtin_charp(Interp *interp, SExpRef args) {
-    if (LENGTH(args) != 1) return new_error(interp, "char?: arg num error.");
+    if (LENGTH(args) != 1) return new_error(interp, "char?: arg num error.\n");
     return new_boolean(interp, VALTYPE(CAR(args)) == kCharSExp);
 }
 
 SExpRef builtin_char_eq(Interp *interp, SExpRef args) {
-    if (LENGTH(args) != 2) return new_error(interp, "char=: arg num error.");
+    if (LENGTH(args) != 2) return new_error(interp, "char=: arg num error.\n");
     if (VALTYPE(CAR(args)) != kCharSExp || VALTYPE(CADR(args)) != kCharSExp) {
         return new_error(interp, "char=: type error.\n");
     }
@@ -23,7 +23,7 @@ SExpRef builtin_char_eq(Interp *interp, SExpRef args) {
 }
 
 SExpRef builtin_char_gt(Interp *interp, SExpRef args) {
-    if (LENGTH(args) != 2) return new_error(interp, "char>: arg num error.");
+    if (LENGTH(args) != 2) return new_error(interp, "char>: arg num error.\n");
     if (VALTYPE(CAR(args)) != kCharSExp || VALTYPE(CADR(args)) != kCharSExp) {
         return new_error(interp, "char>: type error.\n");
     }
@@ -33,7 +33,7 @@ SExpRef builtin_char_gt(Interp *interp, SExpRef args) {
 }
 
 SExpRef builtin_char_lt(Interp *interp, SExpRef args) {
-    if (LENGTH(args) != 2) return new_error(interp, "char<: arg num error.");
+    if (LENGTH(args) != 2) return new_error(interp, "char<: arg num error.\n");
     if (VALTYPE(CAR(args)) != kCharSExp || VALTYPE(CADR(args)) != kCharSExp) {
         return new_error(interp, "char<: type error.\n");
     }

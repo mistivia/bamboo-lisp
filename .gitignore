@@ -10,3 +10,5 @@ fibo.lisp
 debug.lisp
 perf.data
 perf.data.old
+web-*
+index.html
