@@ -2,6 +2,8 @@
 
 Embeddable & Hackable Lisp-2 Interpreter
 
+There is a WebAssembly build, you can [try it online](https://mistivia.github.io/bamboo-lisp/).
+
 ## Features
 
 - Lisp-2 (more like Common Lisp or Emacs Lisp)
