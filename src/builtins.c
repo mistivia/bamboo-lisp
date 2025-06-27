@@ -7,6 +7,127 @@
 #include <float.h>
 #include <math.h>
 
+SExpRef builtin_setnth(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 3) {
+        return new_error(interp, "set-nth: args num error.\n");
+    }
+    SExpRef n = CAR(args), lst = CADR(args), elem = CADDR(args);
+    if (VALTYPE(n) != kIntegerSExp) return new_error(interp, "set-nth: type error.\n");
+    if (VALTYPE(lst) == kPairSExp) {
+        if (REF(n)->integer >= LENGTH(lst)) {
+            return new_error(interp, "nth: out of bound.\n");
+        }
+        for (int i = 0; i < REF(n)->integer; i++) {
+            lst = CDR(lst);
+        }
+        return REF(lst)->pair.car = elem;
+        return NIL;
+    } else if (VALTYPE(lst) == kStringSExp) {
+        if (REF(n)->integer >= strlen(REF(lst)->str)) {
+            return new_error(interp, "nth: out of bound\n");
+        }
+        if (VALTYPE(elem) != kCharSExp) {
+            return new_error(interp, "set-nth: type error.\n");
+        }
+        ((char*)REF(lst)->str)[REF(n)->integer] = REF(elem)->character;
+        return NIL;
+    } else {
+        return new_error(interp, "nth: type error.\n");
+    }
+}
+
+SExpRef builtin_setnthcdr(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 3) {
+        return new_error(interp, "set-nthcdr: args num error.\n");
+    }
+    SExpRef n = CAR(args), lst = CADR(args), elem = CADDR(args);
+    if (VALTYPE(n) != kIntegerSExp) return new_error(interp, "set-nthcdr: type error.\n");
+    if (VALTYPE(lst) == kPairSExp) {
+        if (REF(n)->integer >= LENGTH(lst)) {
+            return new_error(interp, "set-nthcdr: out of bound.\n");
+        }
+        for (int i = 0; i < REF(n)->integer; i++) {
+            lst = CDR(lst);
+        }
+        return REF(lst)->pair.cdr = elem;
+        return NIL;
+    }
+    return new_error(interp, "set-nthcdr: type error.\n");
+
+}
+
+SExpRef builtin_foldl(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 3) {
+        return new_error(interp, "foldl: args num error.\n");
+    }
+    SExpRef fn = CAR(args), init = CADR(args), lst = CADDR(args);
+    SExpRef ret = init;
+    if (VALTYPE(fn) != kUserFuncSExp && VALTYPE(fn) != kFuncSExp) {
+        return new_error(interp, "foldl: type error.\n");
+    }
+    if (!lisp_check_list(interp, lst)) {
+        return new_error(interp, "foldl: type error.\n");
+    }
+    for (SExpRef i = lst ; !NILP(i); i = CDR(i)) {
+        SExpRef x = CAR(i);
+        ret = lisp_call(interp, fn, new_list2(interp, ret, x));
+        if (CTL_FL(ret)) {
+            return ret;
+        }
+    }
+    return ret;
+}
+
+SExpRef builtin_append(Interp *interp, SExpRef args) {
+    for (SExpRef l = args; !NILP(l); l = CDR(l)) {
+        if (!lisp_check_list(interp, l)) {
+            return new_error(interp, "append: type error.\n");
+        }
+    }
+    SExpRef newlst = NIL;
+    for (SExpRef i = args; !NILP(i); i = CDR(i)) {
+        for (SExpRef j = CAR(i); !NILP(j); j = CDR(j)) {
+            newlst = CONS(CAR(j), newlst);
+        }
+    }
+    return lisp_nreverse(interp, newlst);
+}
+
+SExpRef builtin_nconc(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) {
+        return new_error(interp, "nconc: args num error.\n");
+    }
+    SExpRef l1 = CAR(args), l2= CADR(args);
+    if (!lisp_check_list(interp, l1) || !lisp_check_list(interp, l2)) {
+        return new_error(interp, "nconc: type error.\n");
+    }
+    SExpRef last = NIL;
+    for (SExpRef i = l1; !NILP(i); i = CDR(i)) {
+        if (NILP(CDR(i))) {
+            last = i;
+        }
+    }
+    if (NILP(last)) return l2;
+    REF(last)->pair.cdr = l2;
+    return l1;
+}
+
+SExpRef builtin_logand(Interp *interp, SExpRef args) {
+    if (LENGTH(args) < 1) {
+        return new_error(interp, "nconc: args num error.\n");
+    }
+    for (SExpRef l = args; !NILP(l); l = CDR(l)) {
+        if (VALTYPE(CAR(l)) != kIntegerSExp) {
+            return new_error(interp, "append: type error.\n");
+        }
+    }
+    uint64_t res = 0xffffffffffffffffULL;
+    for (SExpRef l = args; !NILP(l); l = CDR(l)) {
+        res = res & (REF(CAR(l))->integer);
+    }
+    return new_integer(interp, res);
+}
+
 SExpRef builtin_charp(Interp *interp, SExpRef args) {
     if (LENGTH(args) != 1) return new_error(interp, "char?: arg num error.\n");
     return new_boolean(interp, VALTYPE(CAR(args)) == kCharSExp);
@@ -151,7 +272,7 @@ SExpRef builtin_floatp(Interp *interp, SExpRef args) {
 }
 
 SExpRef builtin_nreverse(Interp *interp, SExpRef args) {
-    if (LENGTH(args) != 1) return new_error(interp, "number?: arg num error.\n");
+    if (LENGTH(args) != 1) return new_error(interp, "nreverse: arg num error.\n");
     SExpRef lst = CAR(args);
     if (lisp_check_list(interp, lst)) {
         return lisp_nreverse(interp, lst);        
@@ -160,12 +281,12 @@ SExpRef builtin_nreverse(Interp *interp, SExpRef args) {
 }
 
 SExpRef builtin_reverse(Interp *interp, SExpRef args) {
-    if (LENGTH(args) != 1) return new_error(interp, "number?: arg num error.\n");
+    if (LENGTH(args) != 1) return new_error(interp, "reverse: arg num error.\n");
     SExpRef lst = CAR(args);
     if (lisp_check_list(interp, lst)) {
         return lisp_reverse(interp, lst);        
     }
-    return new_error(interp, "nreverse: type error.\n");
+    return new_error(interp, "reverse: type error.\n");
 }
 
 SExpRef builtin_last(Interp *interp, SExpRef args) {

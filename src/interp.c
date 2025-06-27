@@ -215,6 +215,12 @@ void Interp_init(Interp *self) {
     Interp_add_userfunc(self, "alphabetic?", builtin_alphabeticp);
     Interp_add_userfunc(self, "numeric?", builtin_numericp);
     Interp_add_userfunc(self, "alphanum?", builtin_alphanump);
+    Interp_add_userfunc(self, "set-nth", builtin_setnth);
+    Interp_add_userfunc(self, "set-nthcdr", builtin_setnthcdr);
+    Interp_add_userfunc(self, "foldl", builtin_foldl);
+    Interp_add_userfunc(self, "append", builtin_append);
+    Interp_add_userfunc(self, "nconc", builtin_nconc);
+    Interp_add_userfunc(self, "logand", builtin_logand);
 
     Interp_add_userfunc(self, "_gcstat", builtin_gcstat);
     Interp_add_userfunc(self, "_alwaysgc", builtin_alwaysgc);
@@ -752,6 +758,11 @@ SExpRef lisp_call(Interp *interp, SExpRef fn, SExpRef args) {
         POP_REG();
         if (CTL_FL(ret)) break;
     }
+    if (VALTYPE(ret) == kBreakSignal
+            || VALTYPE(ret) == kContinueSignal
+            || VALTYPE(ret) == kReturnSignal) {
+        return new_error(interp, "call: unexpected control flow signal.\n");
+    }
     return ret;
 }
 
@@ -1061,4 +1072,11 @@ SExpRef new_primitive(Interp *interp, LispPrimitive val) {
     REF(ret)->primitive = val;
     return ret;
 }
+
+SExpRef new_list2(Interp *interp, SExpRef e1, SExpRef e2) {
+    return CONS(e1, CONS(e2, NIL));
+}
+SExpRef new_list3(Interp *interp, SExpRef e1, SExpRef e2, SExpRef e3);
+SExpRef new_list4(Interp *interp, SExpRef e1, SExpRef e2, SExpRef e3, SExpRef e4);
+SExpRef new_list5(Interp *interp, SExpRef e1, SExpRef e2, SExpRef e3, SExpRef e4, SExpRef e5);
 

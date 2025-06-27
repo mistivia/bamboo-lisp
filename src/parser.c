@@ -350,12 +350,20 @@ static ParseResult parse_token(Parser *parser, const char *token) {
         if (len < 2) return ParseErr(parser, "Expect boolean or character.\n");
         if (token[1] == '\'') {
             if (len < 3) return ParseErr(parser, "Expect a symbol.\n");
+            if (len == 3) {
+                if (token[2] == '+' || token[2] == '-') {
+                    goto funcmacro;
+                }
+            }
             if (!is_symbol_init(token[2])) return ParseErr(parser, "Expect a symbol.\n");
             for (int i = 3; i < len; i++) {
                 if (!is_symbol_subsequent(token[i])) return ParseErr(parser, "Expect a symbol.\n");
             }
-            SExpRef funcsym = new_symbol(parser->ctx, "function");
-            SExpRef sym = new_symbol(parser->ctx, token+2);
+            SExpRef funcsym;
+            SExpRef sym;
+        funcmacro:
+            funcsym = new_symbol(parser->ctx, "function");
+            sym = new_symbol(parser->ctx, token+2);
             return ParseOk(lisp_cons(parser->ctx, funcsym, lisp_cons(parser->ctx, sym, parser->ctx->nil)));
         }
         if (token[1] == 't') return ParseOk(new_boolean(parser->ctx, true));
