@@ -67,7 +67,6 @@
             }
             try {
                 document.getElementById('output').innerText += input+ '\n';
-                editor.setValue('');
                 const textEncoder = new TextEncoder();
                 const encodedInput = textEncoder.encode(input);
                 const inputLength = encodedInput.length;
@@ -80,6 +79,9 @@
                 Module._free(inputPtr);
                 Module._free(resultPtr);
                 document.getElementById('output').innerText += '▶ ' + resultString + '\n\n';
+                if (resultString !== '<ERROR>') {
+                    editor.setValue('');
+                }
                 window.scrollTo(0, document.body.scrollHeight);
             } catch (error) {
                 document.getElementById('output').innerText = 'Error:' + error.message;
