@@ -3,6 +3,12 @@
 
 #include "interp.h"
 
+SExpRef builtin_setnth(Interp *interp, SExpRef args);
+SExpRef builtin_setnthcdr(Interp *interp, SExpRef args);
+SExpRef builtin_foldl(Interp *interp, SExpRef args);
+SExpRef builtin_append(Interp *interp, SExpRef args);
+SExpRef builtin_nconc(Interp *interp, SExpRef args);
+SExpRef builtin_logand(Interp *interp, SExpRef args);
 SExpRef builtin_charp(Interp *interp, SExpRef args);
 SExpRef builtin_char_eq(Interp *interp, SExpRef args);
 SExpRef builtin_char_gt(Interp *interp, SExpRef args);
