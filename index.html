@@ -4,18 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bamboo Lisp</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.33.0/ace.js"></script>
     <style>
         body {
             font-family: monospace;
         }
         textarea {
-            font-size: 16px;
+            font-size: 14px;
         }
         button {
-            font-size: 16px;
+            font-size: 14px;
         }
         #output {
-            font-size: 16px;
+            font-size: 14px;
+        }
+        #editor {
+            font-size: 14px;
         }
     </style>
 </head>
@@ -24,12 +28,20 @@
         <h1>Bamboo Lisp</h1>
         <p><a href="https://github.com/mistivia/bamboo-lisp">GitHub</a></p>
         <pre id="output"></pre>
-        <textarea rows="3" cols="60" id="lispInput" placeholder="Input Lisp expression..."></textarea>
+        <div id="editor"></div>
         <br>
         <button id="evalButton">Run (Ctrl+Enter)</button>
         <button id="clearButton">Clear</button>
     </div>
     <script>
+        var editor = ace.edit("editor");
+        editor.setTheme("ace/theme/xcode");
+        editor.session.setMode("ace/mode/lisp");
+        editor.setValue("");
+        editor.setAutoScrollEditorIntoView(true);
+        editor.setOption("maxLines", 15);
+        editor.setOption("minLines", 3);
+
         var Module = {};
         Module.print = function(text) {
             document.getElementById('output').innerText += text + '\n';
@@ -49,13 +61,13 @@
             if (!interp) {
                 return;
             }
-            const input = document.getElementById('lispInput').value;
+            const input = editor.getValue();
             if (!input.trim()) {
                 return;
             }
             try {
                 document.getElementById('output').innerText += input+ '\n';
-                document.getElementById('lispInput').value = '';
+                editor.setValue('');
                 const textEncoder = new TextEncoder();
                 const encodedInput = textEncoder.encode(input);
                 const inputLength = encodedInput.length;
