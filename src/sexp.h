@@ -73,6 +73,7 @@ typedef enum {
     kBreakSignal,
     kContinueSignal,
     kTailcallSExp,
+    kExceptionSignal,
 } SExpType;
 
 VECTOR_DEF(SExpRef);

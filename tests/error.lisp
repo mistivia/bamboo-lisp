@@ -9,3 +9,23 @@
 (assert-error (cond (#t (error ""))))
 (assert-error (cond ((error "") #t)))
 
+(assert-exception (throw ""))
+(assert-exception (let ((x (throw ""))) #t))
+(assert-exception (let () (throw "") #t))
+(assert-exception (if (throw "") #t #t))
+(assert-exception (and (throw "")))
+(assert-exception (or (throw "")))
+(assert-exception (funcall (lambda () (throw ""))))
+(assert-exception (while #t (throw "")))
+(assert-exception (cond (#t (throw ""))))
+(assert-exception (cond ((throw "") #t)))
+
+(defvar flag 1)
+(try 
+  (let ()
+    (+ 1 2)
+    (throw 42))
+  (lambda (e)
+    (assert (= e 42))
+    (setq flag 0)))
+(assert (= flag 0))

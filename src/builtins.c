@@ -7,6 +7,11 @@
 #include <float.h>
 #include <math.h>
 
+SExpRef builtin_throw(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "throw: syntax error.\n");
+    return new_exception(interp, CAR(args));
+}
+
 SExpRef builtin_functionp(Interp *interp, SExpRef args) {
     if (LENGTH(args) != 1) {
         return new_error(interp, "function?: args num error.\n");
