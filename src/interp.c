@@ -50,8 +50,13 @@ Interp *new_interp() {
 
 // for wasm
 void print_lisp_error(Interp *interp, SExpRef err) {
-    if (VALTYPE(err) != kErrSignal) return;
-    fprintf(stderr, "Error: %s", REF(err)->str);
+    if (VALTYPE(err) == kErrSignal) {
+        fprintf(stderr, "Error: %s", REF(err)->str);
+    } else if (VALTYPE(err) == kExceptionSignal) {
+        const char *exception_str = lisp_to_string(interp, REF(err)->ret);
+        fprintf(stderr, "Exception: %s\n", exception_str);
+        free((void*)exception_str);
+    }
 }
 
 void Interp_init(Interp *self) {
@@ -121,9 +126,12 @@ void Interp_init(Interp *self) {
     Interp_add_primitive(self, "continue", primitive_continue);
     Interp_add_primitive(self, "assert", primitive_assert);
     Interp_add_primitive(self, "assert-error", primitive_assert_error);
+    Interp_add_primitive(self, "assert-exception", primitive_assert_exception);
     Interp_add_primitive(self, "load", primitive_load);
+    Interp_add_primitive(self, "try", primitive_try);
     Interp_add_primitive(self, "unwind-protect", primitive_unwind_protect);
 
+    Interp_add_userfunc(self, "throw", builtin_throw);
     Interp_add_userfunc(self, "function?", builtin_functionp);
     Interp_add_userfunc(self, "map", builtin_map);
     Interp_add_userfunc(self, "filter", builtin_filter);
@@ -237,6 +245,11 @@ void Interp_init(Interp *self) {
     if (VALTYPE(ret) == kErrSignal) {
         fprintf(stderr, "Failed to load prelude: %s", REF(ret)->str);
     }   
+    if (VALTYPE(ret) == kExceptionSignal) {
+        const char *exception_str = lisp_to_string(interp, Interp_ref(self, ret)->ret);
+        fprintf(stderr, "Failed to load prelude, uncatched exception: %s\n", exception_str);
+        free((void*)exception_str);
+    }   
 }
 
 
@@ -251,7 +264,8 @@ SExpRef Interp_eval_string(Interp *interp, const char * str) {
             goto end;
         }
         ret = lisp_eval(interp, parse_result.val, false);
-        if (Interp_ref(interp, ret)->type == kErrSignal) {
+        if (Interp_ref(interp, ret)->type == kErrSignal
+                || Interp_ref(interp, ret)->type == kExceptionSignal) {
             goto end;
         }
         if (Interp_ref(interp, ret)->type == kBreakSignal
@@ -283,7 +297,8 @@ SExpRef Interp_load_file(Interp *interp, const char *filename) {
             goto end;
         }
         ret = lisp_eval(interp, parse_result.val, false);
-        if (Interp_ref(interp, ret)->type == kErrSignal) {
+        if (Interp_ref(interp, ret)->type == kErrSignal
+                || Interp_ref(interp, ret)->type == kExceptionSignal) {
             goto end;
         }
         if (Interp_ref(interp, ret)->type == kBreakSignal
@@ -504,6 +519,8 @@ void lisp_to_string_impl(str_builder_t *sb, Int2IntHashTable *visited, Interp *i
         str_builder_append(sb, "()");
     } else if (pe->type == kErrSignal) {
         str_builder_append(sb, "<ERROR>");
+    } else if (pe->type == kExceptionSignal) {
+        str_builder_append(sb, "<EXCEPTION>");
     } else if (pe->type == kReturnSignal) {
         str_builder_append(sb, "<RETURN>");
     } else if (pe->type == kBreakSignal) {
@@ -840,6 +857,7 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
             || type == kBooleanSExp
             || type == kCharSExp
             || type == kErrSignal
+            || type == kExceptionSignal
             || type == kBreakSignal
             || type == kContinueSignal
             || type == kReturnSignal
@@ -1077,6 +1095,13 @@ SExpRef new_primitive(Interp *interp, LispPrimitive val) {
     SExpRef ret = new_sexp(interp);
     REF(ret)->type = kPrimitiveSExp;
     REF(ret)->primitive = val;
+    return ret;
+}
+
+SExpRef new_exception(Interp *interp, SExpRef e) {
+    SExpRef ret = new_sexp(interp);
+    REF(ret)->type = kExceptionSignal;
+    REF(ret)->ret = e;
     return ret;
 }
 

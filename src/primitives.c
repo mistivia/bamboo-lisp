@@ -3,6 +3,16 @@
 #include "sexp.h"
 #include "parser.h"
 
+SExpRef primitive_assert_exception(Interp *interp, SExpRef args, bool istail) {
+    SExpRef eargs = lisp_eval_args(interp, args);
+    if (VALTYPE(eargs) == kExceptionSignal) return interp->t;
+
+    const char *expstr = lisp_to_string(interp, CAR(args));
+    SExpRef ret = new_error(interp, "assert-exception failed, no exception: %s.\n", expstr);
+    free((void*)expstr);
+    return ret;
+}
+
 SExpRef primitive_assert_error(Interp *interp, SExpRef args, bool istail) {
     SExpRef eargs = lisp_eval_args(interp, args);
     if (VALTYPE(eargs) == kErrSignal) return interp->t;
@@ -10,6 +20,27 @@ SExpRef primitive_assert_error(Interp *interp, SExpRef args, bool istail) {
     const char *expstr = lisp_to_string(interp, CAR(args));
     SExpRef ret = new_error(interp, "assert-error failed, no error: %s.\n", expstr);
     free((void*)expstr);
+    return ret;
+}
+
+SExpRef primitive_try(Interp *interp, SExpRef args, bool istail) {
+    if (LENGTH(args) != 2) {
+        return new_error(interp, "try: syntax error.\n");
+    }
+    SExpRef exp = CAR(args), ctch = CADR(args);
+    SExpRef ret = EVAL(exp);
+    PUSH_REG(ret);
+    SExpRef catch_func = EVAL(ctch);
+    POP_REG();
+    if (VALTYPE(catch_func) != kUserFuncSExp
+            && VALTYPE(catch_func) != kFuncSExp) {
+        return new_error(interp, "try: syntax error, catch is not a function.\n");
+    }
+    if (VALTYPE(ret) == kExceptionSignal) {
+        PUSH_REG(catch_func);
+        ret = lisp_apply(interp, catch_func, CONS(REF(ret)->ret, NIL), istail);
+        POP_REG();
+    }
     return ret;
 }
 
@@ -84,9 +115,11 @@ SExpRef primitive_unwind_protect(Interp *interp, SExpRef args, bool istail) {
         return new_error(interp, "unwind-protect: syntax error.\n");
     }
     SExpRef ret = EVAL(CAR(args));
+    PUSH_REG(ret);
     for (SExpRef i = CDR(args); !NILP(i); i = CDR(i)) {
         EVAL(CAR(i));
     }
+    POP_REG();
     return ret;
 }
 
@@ -245,7 +278,7 @@ SExpRef primitive_while(Interp *interp, SExpRef args, bool istail) {
 nextloop:
         cond = EVAL(pred);
         if (CTL_FL(cond)) {
-            if (VALTYPE(cond) != kErrSignal) {
+            if (VALTYPE(cond) != kErrSignal && VALTYPE(cond) != kExceptionSignal) {
                 return new_error(interp, "while: unexpected control flow.\n");
             }
             return cond;
@@ -255,7 +288,9 @@ nextloop:
         while (!NILP(iter)) {
             x = CAR(iter);
             ret = EVAL(x);
-            if (VALTYPE(ret) == kErrSignal || VALTYPE(ret) == kReturnSignal) {
+            if (VALTYPE(ret) == kErrSignal
+                    || VALTYPE(ret) == kReturnSignal
+                    || VALTYPE(ret) == kExceptionSignal) {
                 return ret;
             }
             if (VALTYPE(ret) == kBreakSignal) {

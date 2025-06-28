@@ -4,6 +4,7 @@
 #include "interp.h"
 
 SExpRef primitive_assert_error(Interp *interp, SExpRef sexp, bool istail);
+SExpRef primitive_assert_exception(Interp *interp, SExpRef sexp, bool istail);
 SExpRef primitive_load(Interp *interp, SExpRef sexp, bool istail);
 SExpRef primitive_return(Interp *interp, SExpRef sexp, bool istail);
 SExpRef primitive_break(Interp *interp, SExpRef sexp, bool istail);
@@ -29,5 +30,6 @@ SExpRef primitive_quasi(Interp *interp, SExpRef sexp, bool istail);
 SExpRef primitive_and(Interp *interp, SExpRef sexp, bool istail);
 SExpRef primitive_or(Interp *interp, SExpRef sexp, bool istail);
 SExpRef primitive_unwind_protect(Interp *interp, SExpRef sexp, bool istail);
+SExpRef primitive_try(Interp *interp, SExpRef sexp, bool istail);
 
 #endif

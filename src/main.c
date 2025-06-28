@@ -17,6 +17,12 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Error: %s", Interp_ref(&interp, ret)->str);
             mainret = -1; goto end;
         }
+        if (Interp_ref(&interp, ret)->type == kExceptionSignal) {
+            const char *exception_str = lisp_to_string(&interp, Interp_ref(&interp, ret)->ret);
+            fprintf(stderr, "Uncatched exception: %s\n", exception_str);
+            free((void*)exception_str);
+            mainret = -1; goto end;
+        }
         if (Interp_ref(&interp, ret)->type == kBreakSignal
                 || Interp_ref(&interp, ret)->type == kContinueSignal
                 || Interp_ref(&interp, ret)->type == kReturnSignal) {

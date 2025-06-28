@@ -56,6 +56,7 @@ SExpRef Interp_load_file(Interp *interp, const char *filename);
 #define CTL_FL(_x) \
     (REF((_x))->type == kErrSignal \
     || REF((_x))->type == kReturnSignal \
+    || REF((_x))->type == kExceptionSignal \
     || REF((_x))->type == kBreakSignal \
     || REF((_x))->type == kContinueSignal)
 #define VALTYPE(_x) (REF((_x))->type)
@@ -118,6 +119,7 @@ SExpRef new_primitive(Interp *interp, LispPrimitive val);
 SExpRef new_lambda(Interp *interp, SExpRef param, SExpRef body, SExpRef env);
 SExpRef new_macro(Interp *interp, SExpRef param, SExpRef body);
 SExpRef new_tailcall(Interp *interp, SExpRef fn, SExpRef args);
+SExpRef new_exception(Interp *interp, SExpRef e);
 SExpRef new_list1(Interp *ctx, SExpRef e1);
 SExpRef new_list2(Interp *ctx, SExpRef e1, SExpRef e2);
 SExpRef new_list3(Interp *ctx, SExpRef e1, SExpRef e2, SExpRef e3);
