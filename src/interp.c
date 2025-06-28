@@ -122,6 +122,7 @@ void Interp_init(Interp *self) {
     Interp_add_primitive(self, "assert", primitive_assert);
     Interp_add_primitive(self, "assert-error", primitive_assert_error);
     Interp_add_primitive(self, "load", primitive_load);
+    Interp_add_primitive(self, "unwind-protect", primitive_unwind_protect);
 
     Interp_add_userfunc(self, "function?", builtin_functionp);
     Interp_add_userfunc(self, "map", builtin_map);

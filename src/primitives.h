@@ -28,5 +28,6 @@ SExpRef primitive_quote(Interp *interp, SExpRef sexp, bool istail);
 SExpRef primitive_quasi(Interp *interp, SExpRef sexp, bool istail);
 SExpRef primitive_and(Interp *interp, SExpRef sexp, bool istail);
 SExpRef primitive_or(Interp *interp, SExpRef sexp, bool istail);
+SExpRef primitive_unwind_protect(Interp *interp, SExpRef sexp, bool istail);
 
 #endif
