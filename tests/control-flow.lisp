@@ -70,3 +70,22 @@
 (assert (= 1 (funcall (lambda () (while #t (return 1))))))
 (assert (= 1 (funcall (lambda () (let () (return 1))))))
 (assert (= 1 (funcall (lambda () (let ((x (return 1))) (return 2))))))
+
+(defvar flag 0)
+
+(assert-error
+  (unwind-protect
+    (progn
+      (+ 1 1)
+      (error "err"))
+    (setq flag 1)))
+
+(assert (= flag 1))
+
+(assert (= 2
+  (unwind-protect
+    (progn
+      (+ 1 1))
+    (setq flag 1))))
+
+(assert (= flag 1))

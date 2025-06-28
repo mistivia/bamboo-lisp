@@ -79,6 +79,17 @@ SExpRef primitive_eval(Interp *interp, SExpRef args, bool istail) {
     return lisp_eval(interp, args, istail);
 }
 
+SExpRef primitive_unwind_protect(Interp *interp, SExpRef args, bool istail) {
+    if (LENGTH(args) < 2) {
+        return new_error(interp, "unwind-protect: syntax error.\n");
+    }
+    SExpRef ret = EVAL(CAR(args));
+    for (SExpRef i = CDR(args); !NILP(i); i = CDR(i)) {
+        EVAL(CAR(i));
+    }
+    return ret;
+}
+
 SExpRef primitive_if(Interp *interp, SExpRef args, bool istail) {
     SExpRef cond, tb, fb;
 
