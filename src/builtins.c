@@ -7,6 +7,14 @@
 #include <float.h>
 #include <math.h>
 
+SExpRef builtin_functionp(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) {
+        return new_error(interp, "function?: args num error.\n");
+    }
+    return new_boolean(interp, VALTYPE(CAR(args)) == kFuncSExp
+                                || VALTYPE(CAR(args)) == kUserFuncSExp);
+}
+
 SExpRef builtin_setnth(Interp *interp, SExpRef args) {
     if (LENGTH(args) != 3) {
         return new_error(interp, "set-nth: args num error.\n");
@@ -114,17 +122,94 @@ SExpRef builtin_nconc(Interp *interp, SExpRef args) {
 
 SExpRef builtin_logand(Interp *interp, SExpRef args) {
     if (LENGTH(args) < 1) {
-        return new_error(interp, "nconc: args num error.\n");
+        return new_error(interp, "logand: args num error.\n");
     }
     for (SExpRef l = args; !NILP(l); l = CDR(l)) {
         if (VALTYPE(CAR(l)) != kIntegerSExp) {
-            return new_error(interp, "append: type error.\n");
+            return new_error(interp, "logand: type error.\n");
         }
     }
     uint64_t res = 0xffffffffffffffffULL;
     for (SExpRef l = args; !NILP(l); l = CDR(l)) {
         res = res & (REF(CAR(l))->integer);
     }
+    return new_integer(interp, res);
+}
+
+SExpRef builtin_logior(Interp *interp, SExpRef args) {
+    if (LENGTH(args) < 1) {
+        return new_error(interp, "logior: args num error.\n");
+    }
+    for (SExpRef l = args; !NILP(l); l = CDR(l)) {
+        if (VALTYPE(CAR(l)) != kIntegerSExp) {
+            return new_error(interp, "logior: type error.\n");
+        }
+    }
+    uint64_t res = 0;
+    for (SExpRef l = args; !NILP(l); l = CDR(l)) {
+        res = res | (REF(CAR(l))->integer);
+    }
+    return new_integer(interp, res);
+}
+
+SExpRef builtin_logxor(Interp *interp, SExpRef args) {
+    if (LENGTH(args) < 1) {
+        return new_error(interp, "logxor: args num error.\n");
+    }
+    for (SExpRef l = args; !NILP(l); l = CDR(l)) {
+        if (VALTYPE(CAR(l)) != kIntegerSExp) {
+            return new_error(interp, "logxor: type error.\n");
+        }
+    }
+    uint64_t res = 0;
+    for (SExpRef l = args; !NILP(l); l = CDR(l)) {
+        res = res ^ (REF(CAR(l))->integer);
+    }
+    return new_integer(interp, res);
+}
+
+SExpRef builtin_lognot(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) {
+        return new_error(interp, "lognot: args num error.\n");
+    }
+    SExpRef x = CAR(args);
+    if (VALTYPE(x) != kIntegerSExp) {
+        return new_error(interp, "lognot: type error.\n");
+    }
+    uint64_t res = 0;
+    res = ~(REF(x)->integer);
+    return new_integer(interp, res);
+}
+
+SExpRef builtin_lsh(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) {
+        return new_error(interp, "lsh: args num error.\n");
+    }
+    SExpRef x = CAR(args), n = CADR(args);
+    if (VALTYPE(x) != kIntegerSExp) {
+        return new_error(interp, "lsh: type error.\n");
+    }
+    if (VALTYPE(n) != kIntegerSExp) {
+        return new_error(interp, "lsh: type error.\n");
+    }
+    uint64_t res = 0;
+    res = (REF(x)->integer) << (REF(n)->integer);
+    return new_integer(interp, res);
+}
+
+SExpRef builtin_ash(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) {
+        return new_error(interp, "ash: args num error.\n");
+    }
+    SExpRef x = CAR(args), n = CADR(args);
+    if (VALTYPE(x) != kIntegerSExp) {
+        return new_error(interp, "ash: type error.\n");
+    }
+    if (VALTYPE(n) != kIntegerSExp) {
+        return new_error(interp, "ash: type error.\n");
+    }
+    int64_t res = 0;
+    res = (REF(x)->integer) >> (REF(n)->integer);
     return new_integer(interp, res);
 }
 
@@ -263,7 +348,7 @@ SExpRef builtin_numberp(Interp *interp, SExpRef args) {
 
 SExpRef builtin_integerp(Interp *interp, SExpRef args) {
     if (LENGTH(args) != 1) return new_error(interp, "integer?: arg num error.\n");
-    return new_boolean(interp, REF(CAR(args))->type == kNilSExp);
+    return new_boolean(interp, REF(CAR(args))->type == kIntegerSExp);
 }
 
 SExpRef builtin_floatp(Interp *interp, SExpRef args) {

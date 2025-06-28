@@ -123,6 +123,7 @@ void Interp_init(Interp *self) {
     Interp_add_primitive(self, "assert-error", primitive_assert_error);
     Interp_add_primitive(self, "load", primitive_load);
 
+    Interp_add_userfunc(self, "function?", builtin_functionp);
     Interp_add_userfunc(self, "map", builtin_map);
     Interp_add_userfunc(self, "filter", builtin_filter);
     Interp_add_userfunc(self, "remove", builtin_remove);
@@ -221,6 +222,11 @@ void Interp_init(Interp *self) {
     Interp_add_userfunc(self, "append", builtin_append);
     Interp_add_userfunc(self, "nconc", builtin_nconc);
     Interp_add_userfunc(self, "logand", builtin_logand);
+    Interp_add_userfunc(self, "logior", builtin_logior);
+    Interp_add_userfunc(self, "logxor", builtin_logxor);
+    Interp_add_userfunc(self, "lognot", builtin_lognot);
+    Interp_add_userfunc(self, "lsh", builtin_lsh);
+    Interp_add_userfunc(self, "ash", builtin_ash);
 
     Interp_add_userfunc(self, "_gcstat", builtin_gcstat);
     Interp_add_userfunc(self, "_alwaysgc", builtin_alwaysgc);

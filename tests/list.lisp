@@ -55,8 +55,6 @@
 (assert (not (member? nil (list 1 2))))
 (assert (not (member? 3 (list 1 2))))
 
-    ;;Interp_add_userfunc(self, "nconc", builtin_reverse);
-
 (let ((lst '(1 2 999 4)))
   (set-nth 2 lst 3)
   (assert (equal? '(1 2 3 4) lst)))
@@ -78,3 +76,22 @@
 (let ((a '(1 2 3))
       (b '(4 5 6)))
   (assert (equal? '(1 2 3 4 5 6) (nconc a b))))
+
+(assert (equal? '(1 2 3) (take 3 '(1 2 3 4 5))))
+(assert (equal? '(4 5) (drop 3 '(1 2 3 4 5))))
+
+(assert (equal? '(1 2 3)
+                (take-while (lambda (x) (<= x 3))
+                            '(1 2 3 4 5))))
+
+(assert (equal? '(4 5)
+                (drop-while (lambda (x) (<= x 3))
+                            '(1 2 3 4 5))))
+
+(assert (equal? '(1 2) (sublist 1 3 '(0 1 2 3 4))))
+
+(assert (equal? '(3 4 5) (find 3 '(1 2 3 4 5))))
+(assert (equal? nil (find 99 '(1 2 3 4))))
+
+(assert (contains? 3 '(1 2 3 4)))
+(assert (not (contains? 3 '(1 2 4 5))))

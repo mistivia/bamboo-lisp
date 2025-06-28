@@ -3,6 +3,12 @@
 
 #include "interp.h"
 
+SExpRef builtin_logior(Interp *interp, SExpRef args);
+SExpRef builtin_logxor(Interp *interp, SExpRef args);
+SExpRef builtin_lognot(Interp *interp, SExpRef args);
+SExpRef builtin_lsh(Interp *interp, SExpRef args);
+SExpRef builtin_ash(Interp *interp, SExpRef args);
+SExpRef builtin_functionp(Interp *interp, SExpRef args);
 SExpRef builtin_setnth(Interp *interp, SExpRef args);
 SExpRef builtin_setnthcdr(Interp *interp, SExpRef args);
 SExpRef builtin_foldl(Interp *interp, SExpRef args);
