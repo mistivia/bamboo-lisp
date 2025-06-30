@@ -108,3 +108,7 @@ See `tests/` for more examples.
 ;; ... (10 times)
 ```
 
+## Documents (WIP)
+
+- [Primitives](https://github.com/mistivia/bamboo-lisp/blob/master/docs/primitives.md)
+
