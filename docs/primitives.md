@@ -21,12 +21,12 @@ that is expected to throw exceptions.
 
 Evaluates *form*. If *form* results in an **error signal**, `assert-error` returns `#t`. Otherwise, it throws an error indicating that *form* did not produce an error. This primitive is useful for writing tests that verify if specific code paths correctly raise errors.
 
-```llisp
+```lisp
 (assert-error (error "This is an error."))
-    -> #t
+    ;; -> #t
 
 (assert-error (+ 1 2))
-    -> Error
+    ;; -> Error
 ```
 
 ---
@@ -38,17 +38,17 @@ The `try` primitive evaluates the given ***expression***. If the evaluation of *
 ```lisp
 (try
   (throw "Alas!")
-  (lambda (e) (string-append "Caught exception: " e)))
-    -> "Caught exception: Alas!"
+  (lambda (e) (concat "Caught exception: " e)))
+    ;; -> "Caught exception: Alas!"
 
 (try
   (+ 1 2)
-  (lambda (e) (string-append "Caught exception: " e)))
-    -> 3
+  (lambda (e) (concat "Caught exception: " e)))
+    ;; -> 3
 
 (try
   (+ 1 2)
   'not-a-function)
-    -> Error: try: syntax error, catch is not a function.
+    ;; -> Error: try: syntax error, catch is not a function.
 ```
 
