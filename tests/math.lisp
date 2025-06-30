@@ -9,6 +9,8 @@
 (assert (= 1 (abs 1)))
 (assert (= 1.1 (abs 1.1)))
 
+(~~ 0.2 (/ 5))
+
 (~~ 3.141 pi)
 (assert-error (~~ 3.2 pi))
 
