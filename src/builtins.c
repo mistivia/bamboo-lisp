@@ -1220,7 +1220,7 @@ SExpRef builtin_div(Interp *interp, SExpRef args) {
     if (args_len == 1) {
         SExp num = *REF(CAR(args));
         if (num.type == kIntegerSExp) {
-            return new_integer(interp, 1.0/num.integer);
+            return new_real(interp, 1.0/num.integer);
         }
         return new_real(interp, 1.0/num.real);
     }

@@ -2,7 +2,6 @@ mode ?= debug
 cc = gcc
 
 includes = -DWITHREADLINE -I3rdparty/algds/build/include/
-#includes = -I3rdparty/algds/build/include/
 
 3rdlibs = 3rdparty/algds/build/lib/libalgds.a
 ldflags = -lm -lreadline
@@ -10,8 +9,8 @@ ifeq ($(mode), debug)
 	cflags = $(includes) \
 		-g \
 		-fsanitize=address
-else ifeq ($(mode), debug)
-	cflags = $(includes) -g -flto -O2
+else 
+	cflags = $(includes) -flto -O2
 endif
 
 src = $(shell find src/ -name '*.c' -not -name 'main.c')
