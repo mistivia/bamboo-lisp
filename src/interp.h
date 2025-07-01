@@ -44,7 +44,7 @@ void Interp_add_userfunc(Interp *self, const char *name, LispUserFunc fn);
 SExpRef Interp_eval_string(Interp *interp, const char * str);
 SExpRef Interp_load_file(Interp *interp, const char *filename);
 
-#define REF(_x) (&(interp->objs.buffer)[(_x).idx])
+#define REF(_x) (((_x).idx) >= 0 ? (&(interp->objs.buffer)[(_x).idx]) : NULL)
 #define CONS(_x, _y) (lisp_cons(interp, (_x), (_y)))
 #define NILP(_x) (lisp_nilp(interp, (_x)))
 #define LENGTH(_x) (lisp_length(interp, (_x)))
