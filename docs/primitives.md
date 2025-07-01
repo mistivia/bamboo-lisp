@@ -1,5 +1,22 @@
 # Primitives
 
+**(assert *expression*)**
+
+Evaluates *expression*. If *expression* evaluates to a non-false,
+non-control-flow value, `assert` returns `#t`. Otherwise, it signals an error
+indicating that the assertion failed, including the string representation of
+the original *expression*.
+
+```lisp
+(assert (= 1 1))
+;; -> #t
+
+(assert (> 1 2))
+;; -> Error
+```
+
+---
+
 **(assert-exception *form*)**
 
 Evaluates *form*. If *form* evaluates to an exception signal,
@@ -107,3 +124,46 @@ This primitive immediately exits the innermost enclosing loop or iteration const
 ;; 5
 ;; -> ()
 ```
+
+--- 
+
+**(eval *expression*)**
+
+Evaluates *expression* and returns its result. This primitive is typically used to evaluate code that is constructed or obtained at runtime.
+
+```lisp
+(eval '(+ 1 2))
+;; -> 3
+
+(eval '(* 3 4))
+;; -> 12
+
+(defvar my-expression '(+ 10 20))
+(eval my-expression)
+;; -> 30
+```
+
+---
+
+**(unwind-protect *protected-form* *cleanup-form* \&rest *more-cleanup-forms*)**
+
+Evaluates *protected-form*. After *protected-form* is evaluated, whether it completes normally or exits via a non-local exit (like an error or a `return`), each *cleanup-form* is evaluated sequentially. The return value of `unwind-protect` is the result of *protected-form*. This primitive is crucial for ensuring that cleanup actions (like closing files or releasing resources) always occur.
+
+```lisp
+(unwind-protect
+    (progn (print "Doing something...")
+           (/ 10 2))
+    (print "Cleaning up!"))
+;; "Doing something..."
+;; "Cleaning up!"
+;; -> 5
+
+(unwind-protect
+    (progn (print "About to error...")
+           (error "error!"))
+    (print "Still cleaning up!"))
+;; "About to error..."
+;; "Still cleaning up!"
+;; -> Error
+```
+
