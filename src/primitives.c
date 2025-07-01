@@ -106,8 +106,11 @@ SExpRef primitive_assert(Interp *interp, SExpRef args, bool istail) {
 }
 
 SExpRef primitive_eval(Interp *interp, SExpRef args, bool istail) {
+    if (LENGTH(args) != 1) {
+        return new_error(interp, "eval: syntax error.");
+    }
     args = lisp_eval_args(interp, args);
-    return lisp_eval(interp, args, istail);
+    return lisp_eval(interp, CAR(args), istail);
 }
 
 SExpRef primitive_unwind_protect(Interp *interp, SExpRef args, bool istail) {
