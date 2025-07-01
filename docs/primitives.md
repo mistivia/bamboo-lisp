@@ -9,10 +9,10 @@ that is expected to throw exceptions.
 
 ```lisp
 (assert-exception (throw "This is an exception."))
-    ;; -> #t
+;; -> #t
 
 (assert-exception (+ 1 2))
-    ;; -> Error
+;; -> Error
 ```
 
 ---
@@ -23,10 +23,10 @@ Evaluates *form*. If *form* results in an **error signal**, `assert-error` retur
 
 ```lisp
 (assert-error (error "This is an error."))
-    ;; -> #t
+;; -> #t
 
 (assert-error (+ 1 2))
-    ;; -> Error
+;; -> Error
 ```
 
 ---
@@ -39,16 +39,71 @@ The `try` primitive evaluates the given ***expression***. If the evaluation of *
 (try
   (throw "Alas!")
   (lambda (e) (concat "Caught exception: " e)))
-    ;; -> "Caught exception: Alas!"
+;; -> "Caught exception: Alas!"
 
 (try
   (+ 1 2)
   (lambda (e) (concat "Caught exception: " e)))
-    ;; -> 3
+;; -> 3
 
 (try
   (+ 1 2)
   'not-a-function)
-    ;; -> Error: try: syntax error, catch is not a function.
+;; -> Error: try: syntax error, catch is not a function.
 ```
 
+---
+
+**(load *filename*)**
+
+Evaluates the Lisp expressions contained in the file specified by `filename`. The `filename` argument must be a string. This primitive can only be called from the top-level environment.
+
+```lisp
+(load "my-program.lisp")
+;; -> <Result of the last expression in my-program.lisp>
+```
+
+---
+
+**(return *expression*)**
+
+Evaluates `expression` and returns its value from the current **function**. If `expression` is omitted, `return` evaluates to **nil**. It's important to note that `return` only exits functions and does not break out of `let` blocks or other control structures.
+
+```lisp
+(defun my-func (x)
+    (if (> x 10)
+        (return "Value too large!")
+        (+ x 5)))
+;; -> my-func
+
+(my-func 5)
+;; -> 10
+
+(my-func 12)
+;; -> "Value too large!"
+```
+
+---
+
+**(break)**
+
+This primitive immediately exits the innermost enclosing loop or iteration construct. It's analogous to the `break` statement in C. The `break` primitive takes no arguments.
+
+```lisp
+(defun count-to-five ()
+    (let ((i 0))
+        (while #t
+            (setq i (+ i 1))
+            (when (> i 5)
+                (break))
+            (print i))))
+;; -> count-to-five
+
+(count-to-five)
+;; 1
+;; 2
+;; 3
+;; 4
+;; 5
+;; -> ()
+```

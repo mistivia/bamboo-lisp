@@ -62,6 +62,10 @@ You can use `load` to load a lisp script into the interpreter:
 (load "my-script.lisp")
 ```
 
+## Documents (WIP)
+
+- [Primitives](https://github.com/mistivia/bamboo-lisp/blob/master/docs/primitives.md)
+
 ## Example
 
 See `tests/` for more examples.
@@ -108,7 +112,4 @@ See `tests/` for more examples.
 ;; ... (10 times)
 ```
 
-## Documents (WIP)
-
-- [Primitives](https://github.com/mistivia/bamboo-lisp/blob/master/docs/primitives.md)
 
