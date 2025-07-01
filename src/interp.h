@@ -60,6 +60,7 @@ SExpRef Interp_load_file(Interp *interp, const char *filename);
     || REF((_x))->type == kBreakSignal \
     || REF((_x))->type == kContinueSignal)
 #define VALTYPE(_x) (REF((_x))->type)
+#define CALLABLE(_x) (VALTYPE(_x) == kFuncSExp || VALTYPE(_x) == kUserFuncSExp)
 #define NIL (interp->nil)
 #define CAR(_x) (lisp_car(interp, (_x)))
 #define CDR(_x) (lisp_cdr(interp, (_x)))

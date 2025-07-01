@@ -75,7 +75,7 @@ SExpRef builtin_foldl(Interp *interp, SExpRef args) {
     }
     SExpRef fn = CAR(args), init = CADR(args), lst = CADDR(args);
     SExpRef ret = init;
-    if (VALTYPE(fn) != kUserFuncSExp && VALTYPE(fn) != kFuncSExp) {
+    if (!CALLABLE(fn)) {
         return new_error(interp, "foldl: type error.\n");
     }
     if (!lisp_check_list(interp, lst)) {

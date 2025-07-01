@@ -321,17 +321,28 @@ error:
 SExpRef primitive_defun(Interp *interp, SExpRef args, bool istail) {
     SExpRef name, param, body, function;
 
-    if (LENGTH(args) < 3) goto error;
-    if (CAR(interp->stack).idx != interp->top_level.idx) {
-        return new_error(interp, "defun: functions can only be defined in top level.\n");
-    }
-    name = CAR(args);
-    if (VALTYPE(name) != kSymbolSExp) goto error;
-    param = CADR(args);
-    body = CDDR(args);
-    function = new_lambda(interp, param, body, interp->top_level);
-    lisp_defun(interp, name, function);
-    return name;
+    if (LENGTH(args) == 2) {
+        if (CAR(interp->stack).idx != interp->top_level.idx) {
+            return new_error(interp, "defun: functions can only be defined in top level.\n");
+        }
+        name = CAR(args);
+        if (VALTYPE(name) != kSymbolSExp) goto error;
+        function = EVAL(CADR(args)); 
+        if (!CALLABLE(function)) goto error;
+        lisp_defun(interp, name, function);
+        return name;
+    } else if (LENGTH(args) >= 3) {
+        if (CAR(interp->stack).idx != interp->top_level.idx) {
+            return new_error(interp, "defun: functions can only be defined in top level.\n");
+        }
+        name = CAR(args);
+        if (VALTYPE(name) != kSymbolSExp) goto error;
+        param = CADR(args);
+        body = CDDR(args);
+        function = new_lambda(interp, param, body, interp->top_level);
+        lisp_defun(interp, name, function);
+        return name;
+    } else goto error;
 error:
     return new_error(interp, "defun: syntax error.\n");
 }
