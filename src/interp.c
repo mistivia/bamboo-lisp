@@ -359,67 +359,66 @@ void Interp_gc(Interp *interp, SExpRef tmproot) {
     if (freesize > (heapsize >> 4) && !interp->alwaysgc) {
         return;
     }
-    SExpRefVector gcstack;
-    SExpRefVector_init(&gcstack);
+    SExpPtrVector gcstack;
+    SExpPtrVector_init(&gcstack);
     // add root
-    SExpRefVector_push_back(&gcstack, tmproot);
-    SExpRefVector_push_back(&gcstack, interp->nil);
-    SExpRefVector_push_back(&gcstack, interp->t);
-    SExpRefVector_push_back(&gcstack, interp->f);
-    SExpRefVector_push_back(&gcstack, interp->stack);
-    SExpRefVector_push_back(&gcstack, interp->top_level);
-    SExpRefVector_push_back(&gcstack, interp->reg);
+    SExpPtrVector_push_back(&gcstack, REF(tmproot));
+    SExpPtrVector_push_back(&gcstack, REF(interp->nil));
+    SExpPtrVector_push_back(&gcstack, REF(interp->t));
+    SExpPtrVector_push_back(&gcstack, REF(interp->f));
+    SExpPtrVector_push_back(&gcstack, REF(interp->stack));
+    SExpPtrVector_push_back(&gcstack, REF(interp->top_level));
+    SExpPtrVector_push_back(&gcstack, REF(interp->reg));
     // mark
-    while (!SExpRefVector_empty(&gcstack)) {
-        SExpRef ref = *SExpRefVector_last(&gcstack);
-        SExpRef child;
-        SExpRefVector_pop(&gcstack);
-        if (ref.idx < 0) continue;
-        SExp *obj = REF(ref);
+    while (!SExpPtrVector_empty(&gcstack)) {
+        SExpPtr obj = *SExpPtrVector_last(&gcstack);
+        SExpPtr child;
+        SExpPtrVector_pop(&gcstack);
+        if (!obj) continue;
         if (obj->marked) continue;
         obj->marked = true;
         if (obj->type == kPairSExp) {
-            child = obj->pair.car;
-            if (child.idx >= 0 && !REF(child)->marked) SExpRefVector_push_back(&gcstack, child);
-            child = obj->pair.cdr;
-            if (child.idx >= 0 && !REF(child)->marked) SExpRefVector_push_back(&gcstack, child);
+            child = REF(obj->pair.car);
+            if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
+            child = REF(obj->pair.cdr);
+            if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
         } else if (obj->type == kFuncSExp) {
-            child = obj->func.args;
-            if (child.idx >= 0 && !REF(child)->marked) SExpRefVector_push_back(&gcstack, child);
-            child = obj->func.body;
-            if (child.idx >= 0 && !REF(child)->marked) SExpRefVector_push_back(&gcstack, child);
-            child = obj->func.env;
-            if (child.idx >= 0 && !REF(child)->marked) SExpRefVector_push_back(&gcstack, child);
+            child = REF(obj->func.args);
+            if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
+            child = REF(obj->func.body);
+            if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
+            child = REF(obj->func.env);
+            if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
         } else if (obj->type == kEnvSExp) {
-            child = obj->env.bindings;
-            if (child.idx >= 0 && !REF(child)->marked) SExpRefVector_push_back(&gcstack, child);
-            child = obj->env.parent;
-            if (child.idx >= 0 && !REF(child)->marked) SExpRefVector_push_back(&gcstack, child);
+            child = REF(obj->env.bindings);
+            if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
+            child = REF(obj->env.parent);
+            if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
         } else if (obj->type == kBindingSExp) {
-            child = obj->binding.name;
-            if (child.idx >= 0 && !REF(child)->marked) SExpRefVector_push_back(&gcstack, child);
-            child = obj->binding.value;
-            if (child.idx >= 0 && !REF(child)->marked) SExpRefVector_push_back(&gcstack, child);
-            child = obj->binding.func;
-            if (child.idx >= 0 && !REF(child)->marked) SExpRefVector_push_back(&gcstack, child);
-            child = obj->binding.next;
-            if (child.idx >= 0 && !REF(child)->marked) SExpRefVector_push_back(&gcstack, child);
+            child = REF(obj->binding.name);
+            if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
+            child = REF(obj->binding.value);
+            if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
+            child = REF(obj->binding.func);
+            if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
+            child = REF(obj->binding.next);
+            if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
         } else if (obj->type == kMacroSExp) {
-            child = obj->macro.args;
-            if (child.idx >= 0 && !REF(child)->marked) SExpRefVector_push_back(&gcstack, child);
-            child = obj->macro.body;
-            if (child.idx >= 0 && !REF(child)->marked) SExpRefVector_push_back(&gcstack, child);
+            child = REF(obj->macro.args);
+            if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
+            child = REF(obj->macro.body);
+            if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
         } else if (obj->type == kReturnSignal) {
-            child = obj->ret;
-            if (child.idx >= 0 && !REF(child)->marked) SExpRefVector_push_back(&gcstack, child);
+            child = REF(obj->ret);
+            if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
         } else if (obj->type == kTailcallSExp) {
-            child = obj->tailcall.args;
-            if (child.idx >= 0 && !REF(child)->marked) SExpRefVector_push_back(&gcstack, child);
-            child = obj->tailcall.fn;
-            if (child.idx >= 0 && !REF(child)->marked) SExpRefVector_push_back(&gcstack, child);
+            child = REF(obj->tailcall.args);
+            if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
+            child = REF(obj->tailcall.fn);
+            if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
         }
     }
-    SExpRefVector_free(&gcstack);
+    SExpPtrVector_free(&gcstack);
     // sweep
     for (int i = 0; i < SExpVector_len(&interp->objs); i++) {
         SExp *obj = SExpVector_ref(&interp->objs, i);

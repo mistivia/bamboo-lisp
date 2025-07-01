@@ -109,10 +109,15 @@ struct sexp {
     };
 };
 
+typedef SExp *SExpPtr;
+
+
 void SExp_show(SExp self, FILE* fp);
 void SExpRef_show(SExpRef self, FILE* fp);
+void SExpPtr_show(SExpPtr self, FILE* fp);
 
 VECTOR_DEF(SExp);
+VECTOR_DEF(SExpPtr);
 
 #endif
 
