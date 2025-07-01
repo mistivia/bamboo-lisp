@@ -46,25 +46,6 @@ SExpRef builtin_concat(Interp *interp, SExpRef args);
 SExpRef builtin_print(Interp *interp, SExpRef args);
 SExpRef builtin_princ(Interp *interp, SExpRef args);
 
-SExpRef builtin_abs(Interp *interp, SExpRef args);
-SExpRef builtin_pow(Interp *interp, SExpRef args);
-SExpRef builtin_floor(Interp *interp, SExpRef args);
-SExpRef builtin_truncate(Interp *interp, SExpRef args);
-SExpRef builtin_ceiling(Interp *interp, SExpRef args);
-SExpRef builtin_round(Interp *interp, SExpRef args);
-SExpRef builtin_sin(Interp *interp, SExpRef args);
-SExpRef builtin_cos(Interp *interp, SExpRef args);
-SExpRef builtin_tan(Interp *interp, SExpRef args);
-SExpRef builtin_asin(Interp *interp, SExpRef args);
-SExpRef builtin_acos(Interp *interp, SExpRef args);
-SExpRef builtin_atan(Interp *interp, SExpRef args);
-SExpRef builtin_ln(Interp *interp, SExpRef args);
-SExpRef builtin_log10(Interp *interp, SExpRef args);
-SExpRef builtin_log2(Interp *interp, SExpRef args);
-SExpRef builtin_exp(Interp *interp, SExpRef args);
-SExpRef builtin_min(Interp *interp, SExpRef args);
-SExpRef builtin_max(Interp *interp, SExpRef args);
-
 SExpRef builtin_add(Interp *interp, SExpRef args);
 SExpRef builtin_sub(Interp *interp, SExpRef args);
 SExpRef builtin_mul(Interp *interp, SExpRef args);
