@@ -45,7 +45,7 @@ SExpRef primitive_try(Interp *interp, SExpRef args, bool istail) {
 }
 
 SExpRef primitive_load(Interp *interp, SExpRef args, bool istail) {
-    if (CAR(interp->stack).idx != interp->top_level.idx) {
+    if (CAR(interp->envstack).idx != interp->top_level.idx) {
         return new_error(interp, "load: load can only be in top level.\n");
     }
     if (LENGTH(args) != 1) return new_error(interp, "load: syntax error.\n");
@@ -210,11 +210,11 @@ static bool is_binding_repeat(Interp *interp, SExpRef sym, SExpRef env) {
 SExpRef primitive_let(Interp *interp, SExpRef args, bool istail) {
     SExpRef binding, iter, bindings, env, x,
             val, body, ret, exp;
-
+    SExpRefVector_push_back(&interp->objstack, (SExpRef){-1});
     if (LENGTH(args) < 1) goto error;
     bindings = CAR(args);
     env = new_env(interp);
-    REF(env)->env.parent = CAR(interp->stack);
+    REF(env)->env.parent = CAR(interp->envstack);
 
     iter = bindings;
     while (!NILP(iter)) {
@@ -226,9 +226,10 @@ SExpRef primitive_let(Interp *interp, SExpRef args, bool istail) {
         binding = new_binding(interp, CAR(x), NIL);
         REF(binding)->binding.next = REF(env)->env.bindings;
         REF(env)->env.bindings = binding;
+        SExpRefVector_push_back(&interp->objstack, binding);
         iter = CDR(iter);
     }
-    interp->stack = CONS(env, interp->stack);
+    interp->envstack = CONS(env, interp->envstack);
 
     ret = NIL;
     iter = bindings;
@@ -263,10 +264,12 @@ SExpRef primitive_let(Interp *interp, SExpRef args, bool istail) {
         iter = CDR(iter);
     }
 end:
-    interp->stack = CDR(interp->stack);
+    interp->envstack = CDR(interp->envstack);
+    lisp_pop_objstack_frame(interp);
     return ret;
 
 error:
+    lisp_pop_objstack_frame(interp);
     return new_error(interp, "let: syntax error. \n");
 }
 
@@ -313,7 +316,7 @@ SExpRef primitive_lambda(Interp *interp, SExpRef args, bool istail) {
     SExpRef env, param, body;
 
     if (LENGTH(args) < 2) goto error;
-    env = CAR(interp->stack);
+    env = CAR(interp->envstack);
     param = CAR(args);
     body = CDR(args);
     return new_lambda(interp, param, body, env);
@@ -325,17 +328,16 @@ SExpRef primitive_defun(Interp *interp, SExpRef args, bool istail) {
     SExpRef name, param, body, function;
 
     if (LENGTH(args) == 2) {
-        if (CAR(interp->stack).idx != interp->top_level.idx) {
+        if (CAR(interp->envstack).idx != interp->top_level.idx) {
             return new_error(interp, "defun: functions can only be defined in top level.\n");
         }
         name = CAR(args);
         if (VALTYPE(name) != kSymbolSExp) goto error;
         function = EVAL(CADR(args)); 
         if (!CALLABLE(function)) goto error;
-        lisp_defun(interp, name, function);
-        return name;
+        return lisp_defun(interp, name, function);
     } else if (LENGTH(args) >= 3) {
-        if (CAR(interp->stack).idx != interp->top_level.idx) {
+        if (CAR(interp->envstack).idx != interp->top_level.idx) {
             return new_error(interp, "defun: functions can only be defined in top level.\n");
         }
         name = CAR(args);
@@ -343,8 +345,7 @@ SExpRef primitive_defun(Interp *interp, SExpRef args, bool istail) {
         param = CADR(args);
         body = CDDR(args);
         function = new_lambda(interp, param, body, interp->top_level);
-        lisp_defun(interp, name, function);
-        return name;
+        return lisp_defun(interp, name, function);
     } else goto error;
 error:
     return new_error(interp, "defun: syntax error.\n");
@@ -353,7 +354,7 @@ SExpRef primitive_defmacro(Interp *interp, SExpRef args, bool istail) {
     SExpRef param, name, body, macro;
 
     if (LENGTH(args) < 3) goto error;
-    if (CAR(interp->stack).idx != interp->top_level.idx) {
+    if (CAR(interp->envstack).idx != interp->top_level.idx) {
         return new_error(interp, "defmacro: macros can only be defined in top level.\n");
     }
     name = CAR(args);
@@ -361,8 +362,7 @@ SExpRef primitive_defmacro(Interp *interp, SExpRef args, bool istail) {
     param = CADR(args);
     body = CDDR(args);
     macro = new_macro(interp, param, body);
-    lisp_defun(interp, name, macro);
-    return name;
+    return lisp_defun(interp, name, macro);
 error:
     return new_error(interp, "defmacro: syntax error.\n");
 }
@@ -371,7 +371,7 @@ SExpRef primitive_defvar(Interp *interp, SExpRef args, bool istail) {
     SExpRef name, exp, val;
 
     if (LENGTH(args) != 2) goto error;
-    if (CAR(interp->stack).idx != interp->top_level.idx) {
+    if (CAR(interp->envstack).idx != interp->top_level.idx) {
         return new_error(interp, "defvar: functions can only be defined in top level.\n");
     }
     name = CAR(args);
@@ -439,19 +439,6 @@ error:
 SExpRef primitive_quote(Interp *interp, SExpRef args, bool istail) {
     if (LENGTH(args) != 1) return new_error(interp, "quote: syntax error.\n");
     return CAR(args);
-}
-
-SExpRef primitive_macroexpand1(Interp *interp, SExpRef args, bool istail) {
-    SExpRef macro;
-
-    if (LENGTH(args) != 1) goto error;
-    args = CAR(args);
-    if (VALTYPE(CAR(args)) != kSymbolSExp) goto error;
-    macro = lisp_lookup_func(interp, CAR(args));
-    if (VALTYPE(macro) != kMacroSExp) goto error;
-    return lisp_macroexpand1(interp, macro, CDR(args));
-error:
-    return new_error(interp, "macroexpand-1: syntax error.\n");
 }
 
 SExpRef primitive_apply(Interp *interp, SExpRef args, bool istail) {

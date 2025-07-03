@@ -22,6 +22,7 @@ typedef struct {
     SExpRef args;
     SExpRef body;
     SExpRef env;
+    SExpRef compiled;
 } SExpFunc;
 
 struct interp;
@@ -68,6 +69,7 @@ typedef enum {
     kEnvSExp,
     kBindingSExp,
     kMacroSExp,
+    kStackObjSExp,
     kErrSignal,
     kReturnSignal,
     kBreakSignal,

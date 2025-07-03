@@ -7,6 +7,19 @@
 #include <float.h>
 #include <math.h>
 
+SExpRef builtin_macroexpand1(Interp *interp, SExpRef args) {
+    SExpRef macro;
+
+    if (LENGTH(args) != 1) goto error;
+    args = CAR(args);
+    if (VALTYPE(CAR(args)) != kSymbolSExp) goto error;
+    macro = lisp_lookup_func(interp, CAR(args));
+    if (VALTYPE(macro) != kMacroSExp) goto error;
+    return lisp_macroexpand1(interp, macro, CDR(args));
+error:
+    return new_error(interp, "macroexpand-1: args error.\n");
+}
+
 SExpRef builtin_throw(Interp *interp, SExpRef args) {
     if (LENGTH(args) != 1) return new_error(interp, "throw: syntax error.\n");
     return new_exception(interp, CAR(args));

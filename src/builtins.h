@@ -107,6 +107,7 @@ SExpRef builtin_cons(Interp *interp, SExpRef args);
 SExpRef builtin_symbol2string(Interp *interp, SExpRef args);
 SExpRef builtin_intern(Interp *interp, SExpRef args);
 SExpRef builtin_gensym(Interp *interp, SExpRef args);
+SExpRef builtin_macroexpand1(Interp *interp, SExpRef args);
 
 SExpRef builtin_not(Interp *interp, SExpRef args);
 SExpRef builtin_equal(Interp *interp, SExpRef args);

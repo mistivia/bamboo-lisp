@@ -60,6 +60,8 @@ void print_lisp_error(Interp *interp, SExpRef err) {
 }
 
 void Interp_init(Interp *self) {
+    SExpRefVector_init(&self->objstack);
+    self->version = 0;
     self->recursion_depth = 0;
     self->gensym_cnt = 42;
     self->parser = malloc(sizeof(Parser));
@@ -99,8 +101,8 @@ void Interp_init(Interp *self) {
         IntVector_push_back(&self->empty_space, i);
     }
 
-    self->stack = lisp_cons(self, self->top_level, self->nil);
-    self->reg = self->nil;
+    self->envstack = lisp_cons(self, self->top_level, self->nil);
+    self->tmpstack = self->nil;
 
     Interp_add_primitive(self, "eval", primitive_eval);
     Interp_add_primitive(self, "apply", primitive_apply);
@@ -120,7 +122,6 @@ void Interp_init(Interp *self) {
     Interp_add_primitive(self, "funcall", primitive_funcall);
     Interp_add_primitive(self, "quote", primitive_quote);
     Interp_add_primitive(self, "quasiquote", primitive_quasi);
-    Interp_add_primitive(self, "macroexpand-1", primitive_macroexpand1);
     Interp_add_primitive(self, "return", primitive_return);
     Interp_add_primitive(self, "break", primitive_break);
     Interp_add_primitive(self, "continue", primitive_continue);
@@ -131,6 +132,7 @@ void Interp_init(Interp *self) {
     Interp_add_primitive(self, "try", primitive_try);
     Interp_add_primitive(self, "unwind-protect", primitive_unwind_protect);
 
+    Interp_add_userfunc(self, "macroexpand-1", builtin_macroexpand1);
     Interp_add_userfunc(self, "throw", builtin_throw);
     Interp_add_userfunc(self, "function?", builtin_functionp);
     Interp_add_userfunc(self, "map", builtin_map);
@@ -338,6 +340,7 @@ void Interp_free(Interp *self) {
     SExpRef2SExpRefHashTable_free(&self->topbindings);
     free(self->errmsg_buf);
     Parser_free(self->parser);
+    SExpRefVector_free(&self->objstack);
     free(self->parser);
 }
 
@@ -366,9 +369,9 @@ void Interp_gc(Interp *interp, SExpRef tmproot) {
     SExpPtrVector_push_back(&gcstack, REF(interp->nil));
     SExpPtrVector_push_back(&gcstack, REF(interp->t));
     SExpPtrVector_push_back(&gcstack, REF(interp->f));
-    SExpPtrVector_push_back(&gcstack, REF(interp->stack));
+    SExpPtrVector_push_back(&gcstack, REF(interp->envstack));
     SExpPtrVector_push_back(&gcstack, REF(interp->top_level));
-    SExpPtrVector_push_back(&gcstack, REF(interp->reg));
+    SExpPtrVector_push_back(&gcstack, REF(interp->tmpstack));
     // mark
     while (!SExpPtrVector_empty(&gcstack)) {
         SExpPtr obj = *SExpPtrVector_last(&gcstack);
@@ -576,12 +579,14 @@ error:
     return new_error(interp, "macroexpand: syntax error.\n");
 }
 
-void lisp_defun(Interp *interp, SExpRef name, SExpRef val) {
+SExpRef lisp_defun(Interp *interp, SExpRef name, SExpRef val) {
     SExpRef binding = REF(interp->top_level)->env.bindings;
     while (REF(binding)->type != kNilSExp) {
         if (name.idx == REF(binding)->binding.name.idx) {
+            if (VALTYPE(REF(binding)->binding.func) == kPrimitiveSExp) {
+                return new_error(interp, "Cannot redefine a primitive.\n");
+            }
             REF(binding)->binding.func = val;
-            return;
         }
         binding = REF(binding)->binding.next;
     }
@@ -592,6 +597,8 @@ void lisp_defun(Interp *interp, SExpRef name, SExpRef val) {
     REF(newbinding)->binding.next = binding;
     REF(interp->top_level)->env.bindings = newbinding;
     SExpRef2SExpRefHashTable_insert(&interp->topbindings, name, newbinding);
+    interp->version++;
+    return name;
 }
 
 void lisp_defvar(Interp *interp, SExpRef name, SExpRef val) {
@@ -613,7 +620,7 @@ void lisp_defvar(Interp *interp, SExpRef name, SExpRef val) {
 }
 
 SExpRef lisp_setq(Interp *interp, SExpRef name, SExpRef val) {
-    SExpRef env = CAR(interp->stack);
+    SExpRef env = CAR(interp->envstack);
     while (REF(env)->type != kNilSExp) {
         SExpRef binding = REF(env)->env.bindings;
         while (REF(binding)->type != kNilSExp) {
@@ -631,7 +638,7 @@ SExpRef lisp_setq(Interp *interp, SExpRef name, SExpRef val) {
 SExpRef lisp_lookup_topvar(Interp *interp, SExpRef name);
 
 SExpRef lisp_lookup(Interp *interp, SExpRef name) {
-    SExpRef env = CAR(interp->stack);
+    SExpRef env = CAR(interp->envstack);
     while (REF(env)->type != kNilSExp) {
         if (env.idx == interp->top_level.idx) {
             return lisp_lookup_topvar(interp, name);
@@ -744,6 +751,7 @@ int lisp_length(Interp *interp, SExpRef lst) {
 }
 
 static SExpRef build_function_env(Interp *interp, SExpRef func, SExpRef args) {
+    SExpRefVector_push_back(&interp->objstack, (SExpRef){-1});
     SExpRef param = REF(func)->func.args;
     SExpRef iparam = param;
     SExpRef iargs = args;
@@ -764,6 +772,7 @@ static SExpRef build_function_env(Interp *interp, SExpRef func, SExpRef args) {
         SExpRef binding = new_binding(interp, name, CAR(iargs));
         REF(binding)->binding.next = REF(env)->env.bindings;
         REF(env)->env.bindings = binding;
+        SExpRefVector_push_back(&interp->objstack, binding);
         iargs = CDR(iargs);
         iparam = CDR(iparam);
     }
@@ -802,10 +811,16 @@ SExpRef lisp_apply(Interp *interp, SExpRef fn, SExpRef args, bool istail) {
         env = build_function_env(interp, fn, args);
         if (CTL_FL(env)) {
             interp->recursion_depth--;
+            lisp_pop_objstack_frame(interp);
             return env;
         }
-        interp->stack = CONS(env, interp->stack);
-        iter = REF(fn)->func.body;
+        interp->envstack = CONS(env, interp->envstack);
+        if (REF(CAR(REF(fn)->func.compiled))->integer == interp->version) {
+            iter = CDR(REF(fn)->func.compiled);
+        } else {
+            // TODO: expand
+            iter = REF(fn)->func.body;
+        }
         while (!NILP(iter)) {
             exp = CAR(iter);
             if (NILP(CDR(iter))) {
@@ -832,11 +847,21 @@ end:
     if (VALTYPE(ret) == kReturnSignal) {
         ret = REF(ret)->ret;
     }
-    interp->stack = CDR(interp->stack);
+    interp->envstack = CDR(interp->envstack);
+    lisp_pop_objstack_frame(interp);
     interp->recursion_depth--;
     return ret;
 }
 
+void lisp_pop_objstack_frame(Interp *interp) {
+    if (SExpRefVector_len(&interp->objstack) == 0) return;
+    SExpRef *top = SExpRefVector_last(&interp->objstack);
+    while (top->idx >= 0) {
+        SExpRefVector_pop(&interp->objstack);
+        top = SExpRefVector_last(&interp->objstack);
+    }
+    SExpRefVector_pop(&interp->objstack);
+}
 
 SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
     if (interp->recursion_depth > 2048) {
@@ -867,6 +892,13 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
         ret = sexp;
         goto end;
     }
+    if (type == kBindingSExp) {
+        ret = REF(sexp)->binding.value;
+        goto end;
+    }
+    if (type == kStackObjSExp) {
+        // TODO
+    }
     if (type == kSymbolSExp) {
         ret = lisp_lookup(interp, sexp);
         goto end;
@@ -877,16 +909,9 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
             ret = new_error(interp, "eval: list not proper.\n");
             goto end;
         }
-        if (REF(CAR(sexp))->type != kSymbolSExp) {
-            ret = new_error(interp, "eval: first elem must be a symbol.\n");
-            goto end;
-        }
-        SExpRef symbol = CAR(sexp);
-        fn = lisp_lookup_func(interp, symbol);
-        if (CTL_FL(fn)) {
-            ret = new_error(interp, "eval: \"%s\" is not a primitive, function, "
-                    "or macro.\n", REF(symbol)->str);
-            goto end;
+        if (REF(CAR(sexp))->type == kSymbolSExp) {
+            SExpRef symbol = CAR(sexp);
+            fn = lisp_lookup_func(interp, symbol);
         }
         if (VALTYPE(fn) == kPrimitiveSExp) {
             LispPrimitive primitive_fn = REF(fn)->primitive;
@@ -917,9 +942,7 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
             POP_REG();
             goto end;
         } else {
-            ret = new_error(interp,
-                    "eval: fatal binding eval, %s is not a func, prim "
-                    "or macro.\n", REF(symbol)->str);
+            ret = new_error(interp, "eval: syntax error.");
             goto end;
         }
     }
@@ -976,6 +999,7 @@ SExpRef new_lambda(Interp *interp, SExpRef param, SExpRef body, SExpRef env) {
     REF(ret)->func.args = param;
     REF(ret)->func.body = body;
     REF(ret)->func.env = env;
+    REF(ret)->func.compiled = CONS(new_integer(interp, -1), NIL);
     return ret;
 }
 

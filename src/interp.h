@@ -21,10 +21,11 @@ struct interp {
     SExpRef2SExpRefHashTable topbindings;
     IntVector empty_space;
     String2IntHashTable symbols;
-    SExpRef stack;
+    SExpRef envstack;
+    SExpRefVector objstack;
     SExpRef t;
     SExpRef f;
-    SExpRef reg;
+    SExpRef tmpstack;
     SExpRef top_level;
     SExpRef nil;
     char *errmsg_buf;
@@ -32,6 +33,7 @@ struct interp {
     int gensym_cnt;
     bool alwaysgc;
     int recursion_depth;
+    int version;
 };
 
 void Interp_init(Interp *self);
@@ -72,14 +74,22 @@ SExpRef Interp_load_file(Interp *interp, const char *filename);
 #define CDDDDR(_x) CDR(CDDDR(_x))
 #define CADDDDR(_x) CAR(CDDDDR(_x))
 #define CDDDDDR(_x) CDR(CDDDDR(_x))
-#define PUSH_REG(_x) { interp->reg = CONS((_x), interp->reg); }
-#define POP_REG() { interp->reg = CDR(interp->reg);  }
+#define PUSH_REG(_x) { interp->tmpstack = CONS((_x), interp->tmpstack); }
+#define POP_REG() { interp->tmpstack = CDR(interp->tmpstack);  }
 
+SExpRef lisp_compile_expr(Interp *interp, SExpRef expr);
+SExpRef lisp_compile_func(Interp *interp, SExpRef args, SExpRef body, SExpRef env);
+
+SExpRef lisp_compile(Interp *interp, SExpRefVector *compstack, SExpRef expr);
+SExpRef lisp_compile_exprlst(Interp *interp, SExpRefVector *compstack, SExpRef expr);
+SExpRef lisp_compile_primitive(Interp *interp, SExpRefVector *compstack, const char *name, SExpRef args);
+
+void lisp_pop_objstack_frame(Interp *interp);
 const char* lisp_to_string(Interp *interp, SExpRef val);
 SExpRef lisp_macroexpand1(Interp *interp, SExpRef macro, SExpRef args);
 SExpRef lisp_nreverse(Interp *interp, SExpRef lst);
 SExpRef lisp_reverse(Interp *interp, SExpRef lst);
-void lisp_defun(Interp *interp, SExpRef name, SExpRef val);
+SExpRef lisp_defun(Interp *interp, SExpRef name, SExpRef val);
 void lisp_defvar(Interp *interp, SExpRef name, SExpRef val);
 void lisp_print(Interp *interp, SExpRef obj, FILE *fp);
 SExpRef lisp_lookup(Interp *interp, SExpRef name);
