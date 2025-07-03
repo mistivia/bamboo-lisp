@@ -637,6 +637,24 @@ SExpRef lisp_setq(Interp *interp, SExpRef name, SExpRef val) {
 
 SExpRef lisp_lookup_topvar(Interp *interp, SExpRef name);
 
+SExpRef lisp_env_binding(Interp *interp, SExpRef env, SExpRef name) {
+    while (REF(env)->type != kNilSExp) {
+        if (env.idx == interp->top_level.idx) {
+            return lisp_lookup_topvar(interp, name);
+        }
+        SExpRef binding = REF(env)->env.bindings;
+        while (REF(binding)->type != kNilSExp) {
+            if (name.idx == REF(binding)->binding.name.idx) {
+                return binding;
+            }
+            binding = REF(binding)->binding.next;
+        }
+        env = REF(env)->env.parent;
+    }
+notfound:
+    return new_error(interp, "Unbound variable: %s.\n", REF(name)->str);
+}
+
 SExpRef lisp_lookup(Interp *interp, SExpRef name) {
     SExpRef env = CAR(interp->envstack);
     while (REF(env)->type != kNilSExp) {
@@ -863,6 +881,60 @@ void lisp_pop_objstack_frame(Interp *interp) {
     SExpRefVector_pop(&interp->objstack);
 }
 
+SExpRef lisp_compile_expr(Interp *interp, SExpRef expr);
+SExpRef lisp_compile_func(Interp *interp, SExpRef args, SExpRef body, SExpRef env);
+
+SExpRef lisp_compile(Interp *interp, SExpRefVector *compstack, SExpRef env, SExpRef expr) {
+    SExpType type = VALTYPE(expr);
+    if (type == kIntegerSExp
+            || type == kStringSExp
+            || type == kBooleanSExp
+            || type == kCharSExp
+            || type == kRealSExp) {
+        return expr;
+    }
+    if (type == kSymbolSExp) {
+        int stacklen = SExpRefVector_len(compstack);
+        for (int i = -1; stacklen + i >= 0; i++) {
+            if (SExpRefVector_ref(compstack, stacklen+i)->idx == expr.idx) {
+                return new_stackobj(interp, i);
+            }
+        }
+        return lisp_env_binding(interp, env, expr);
+    }
+    if (type == kPairSExp) {
+        if (!lisp_check_list(interp, expr)) goto error;
+        if (VALTYPE(CAR(expr)) != kSymbolSExp) goto error;
+        SExpRef fn = lisp_lookup_func(interp, CAR(expr));
+        if (VALTYPE(fn) == kMacroSExp) {
+            return lisp_compile(interp, compstack, env, lisp_macroexpand1(interp, fn, CDR(expr)));
+        } else if (VALTYPE(fn) == kFuncSExp || VALTYPE(fn) == kUserFuncSExp) {
+            return CONS(fn, lisp_compile_exprlst(interp, compstack, env, CDR(expr)));
+        } else if (VALTYPE(fn) == kPrimitiveSExp) {
+            return lisp_compile_primitive(interp, compstack, env, expr);
+        }
+    }
+    const char *expr_str;
+error:
+    expr_str = lisp_to_string(interp, expr);
+    SExpRef ret = new_error(interp, "Compilation failed, syntax error: %s\n");
+    free((void*)expr_str);
+    return ret;
+}
+
+SExpRef lisp_compile_exprlst(Interp *interp, SExpRefVector *compstack, SExpRef env, SExpRef expr) {
+    if (NILP(expr)) return interp->nil;
+    SExpRef compiled_car = lisp_compile(interp, compstack, env, CAR(expr));
+    SExpRef compiled_cdr = lisp_compile_exprlst(interp, compstack, env, CDR(expr));
+    return CONS(compiled_car, compiled_cdr);
+}
+
+SExpRef lisp_compile_primitive(Interp *interp, SExpRefVector *compstack, SExpRef env, SExpRef expr) {
+    // TODO
+    return expr;
+}
+
+
 SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
     if (interp->recursion_depth > 2048) {
         return new_error(interp, "eval: stack overflow.\n");
@@ -1059,6 +1131,15 @@ SExpRef new_integer(Interp *interp, int64_t val) {
     psexp->integer = val;
     return ret;
 }
+
+SExpRef new_stackobj(Interp *interp, int64_t val) {
+    SExpRef ret = new_sexp(interp);
+    SExp *psexp = Interp_ref(interp, ret);
+    psexp->type = kStackObjSExp;
+    psexp->integer = val;
+    return ret;
+}
+
 
 SExpRef new_real(Interp *interp, double val) {
     SExpRef ret = new_sexp(interp);

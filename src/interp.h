@@ -80,9 +80,9 @@ SExpRef Interp_load_file(Interp *interp, const char *filename);
 SExpRef lisp_compile_expr(Interp *interp, SExpRef expr);
 SExpRef lisp_compile_func(Interp *interp, SExpRef args, SExpRef body, SExpRef env);
 
-SExpRef lisp_compile(Interp *interp, SExpRefVector *compstack, SExpRef expr);
-SExpRef lisp_compile_exprlst(Interp *interp, SExpRefVector *compstack, SExpRef expr);
-SExpRef lisp_compile_primitive(Interp *interp, SExpRefVector *compstack, const char *name, SExpRef args);
+SExpRef lisp_compile(Interp *interp, SExpRefVector *compstack, SExpRef env, SExpRef expr);
+SExpRef lisp_compile_exprlst(Interp *interp, SExpRefVector *compstack, SExpRef env, SExpRef expr);
+SExpRef lisp_compile_primitive(Interp *interp, SExpRefVector *compstack, SExpRef env, SExpRef expr);
 
 void lisp_pop_objstack_frame(Interp *interp);
 const char* lisp_to_string(Interp *interp, SExpRef val);
@@ -92,6 +92,7 @@ SExpRef lisp_reverse(Interp *interp, SExpRef lst);
 SExpRef lisp_defun(Interp *interp, SExpRef name, SExpRef val);
 void lisp_defvar(Interp *interp, SExpRef name, SExpRef val);
 void lisp_print(Interp *interp, SExpRef obj, FILE *fp);
+SExpRef lisp_env_binding(Interp *interp, SExpRef env, SExpRef name);
 SExpRef lisp_lookup(Interp *interp, SExpRef name);
 SExpRef lisp_lookup_func(Interp *interp, SExpRef name);
 SExpRef lisp_apply(Interp *interp, SExpRef fn, SExpRef args, bool istail);
@@ -120,6 +121,7 @@ SExpRef new_continue(Interp *ctx);
 SExpRef new_boolean(Interp *ctx, bool val);
 SExpRef new_char(Interp *ctx, char val);
 SExpRef new_integer(Interp *ctx, int64_t val);
+SExpRef new_stackobj(Interp *ctx, int64_t val);
 SExpRef new_real(Interp *ctx, double val);
 SExpRef new_string(Interp *ctx, const char *val);
 SExpRef new_symbol(Interp *ctx, const char *val);
