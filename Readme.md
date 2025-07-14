@@ -30,13 +30,12 @@ To keep simplicity, Bamboo Lisp is a VERY SLOW tree-walking interpreter. The per
 Init submodule:
 
 ```bash
-git submodule init --recursive
+git submodule update --init --recursive
 ```
 
 Debug:
 
 ```bash
-git submodule init --recursive
 make
 ```
 
