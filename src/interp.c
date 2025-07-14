@@ -12,6 +12,8 @@
 #include "parser.h"
 #include "prelude.h"
 
+#include "vector.h"
+
 #define BUFSIZE 1024
 
 bool SExpRef_eq(SExpRef a, SExpRef b) {
@@ -240,6 +242,9 @@ void Interp_init(Interp *self) {
     Interp_add_userfunc(self, "_gcstat", builtin_gcstat);
     Interp_add_userfunc(self, "_alwaysgc", builtin_alwaysgc);
 
+    // extentions
+    bamboo_lisp_init_vector(self);
+
     SExpRef ret = Interp_eval_string(self, bamboo_lisp_prelude);
     Interp *interp = self;
     if (VALTYPE(ret) == kErrSignal) {
@@ -325,6 +330,11 @@ void Interp_free(Interp *self) {
         SExp *obj = SExpVector_ref(&self->objs, i);
         if (obj->type == kStringSExp) {
             free((void*)obj->str);
+        }
+        if (obj->type == kUserDataSExp) {
+            if (obj->userdata_meta && obj->userdata_meta->free) {
+                (*obj->userdata_meta->free)(obj->userdata);
+            }
         }
     }
     for (String2IntHashTableIter iter = String2IntHashTable_begin(&self->symbols);
@@ -416,6 +426,10 @@ void Interp_gc(Interp *interp, SExpRef tmproot) {
             if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
             child = REF(obj->tailcall.fn);
             if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
+        } else if (obj->type == kUserDataSExp) {
+            if (obj->userdata_meta && obj->userdata_meta->gcmark) {
+                (*obj->userdata_meta->gcmark)(interp, &gcstack, obj->userdata);
+            }
         }
     }
     SExpPtrVector_free(&gcstack);
@@ -429,6 +443,11 @@ void Interp_gc(Interp *interp, SExpRef tmproot) {
         if (obj->type == kSymbolSExp) continue;
         if (obj->type == kEmptySExp) continue;
         if (obj->type == kStringSExp) free((void*)obj->str);
+        if (obj->type == kUserDataSExp) {
+            if (obj->userdata_meta && obj->userdata_meta->free) {
+                (*obj->userdata_meta->free)(obj->userdata);
+            }
+        }
         obj->type = kEmptySExp;
         IntVector_push_back(&interp->empty_space, i);
     }
@@ -528,6 +547,8 @@ void lisp_to_string_impl(str_builder_t *sb, Int2IntHashTable *visited, Interp *i
         str_builder_append(sb, "<CONTINUE>");
     } else if (pe->type == kTailcallSExp) {
         str_builder_append(sb, "<TAILCALL>");
+    } else if (pe->type == kUserDataSExp) {
+        str_builder_append(sb, "<USERDATA>");
     } else if (pe->type == kPairSExp) {
         if (Int2IntHashTable_find(visited, val.idx) != NULL) {
             str_builder_append(sb, "<%d>", val.idx);

@@ -78,10 +78,13 @@ typedef enum {
 
 VECTOR_DEF(SExpRef);
 
+typedef SExp *SExpPtr;
+VECTOR_DEF(SExpPtr);
+
 typedef struct {
-    SExpRef type;
+    const char *type;
     void (*free)(void *self);
-    void (*gcmark)(SExpRefVector *gcstack, void *self);
+    void (*gcmark)(Interp *interp, SExpPtrVector *gcstack, void *self);
 } LispUserdataMeta;
 
 struct sexp {
@@ -94,7 +97,7 @@ struct sexp {
         char character;
         const char *str;
         struct {
-            const void *userdata;
+            void *userdata;
             LispUserdataMeta *userdata_meta;
         };
         SExpPair pair;
@@ -109,15 +112,12 @@ struct sexp {
     };
 };
 
-typedef SExp *SExpPtr;
-
 
 void SExp_show(SExp self, FILE* fp);
 void SExpRef_show(SExpRef self, FILE* fp);
 void SExpPtr_show(SExpPtr self, FILE* fp);
 
 VECTOR_DEF(SExp);
-VECTOR_DEF(SExpPtr);
 
 #endif
 
