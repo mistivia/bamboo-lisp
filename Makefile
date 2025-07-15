@@ -21,6 +21,8 @@ tests_bin=$(tests:.c=.bin)
 
 all: bamboo-lisp
 
+staticlib: libbamboo-lisp.a
+
 web: web-bamboo-lisp.js
 
 web-bamboo-lisp.js: $(src)
@@ -36,6 +38,9 @@ src/prelude.c: src/prelude.lisp
 
 bamboo-lisp:  $(obj) src/main.o 3rdparty/algds/build/lib/libalgds.a
 	gcc $(cflags) -o $@ $^ $(ldflags)
+
+libbamboo-lisp.a: $(obj)
+	ar cr $@ $^
 
 3rdparty/algds/build/lib/libalgds.a:
 	cd 3rdparty/algds && \

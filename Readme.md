@@ -62,13 +62,9 @@ You can use `load` to load a lisp script into the interpreter:
 (load "my-script.lisp")
 ```
 
-## Documents (WIP)
+## Examples
 
-- [Primitives](https://github.com/mistivia/bamboo-lisp/blob/master/docs/primitives.md)
-
-## Example
-
-See `tests/` for more examples.
+See `tests/` for more examples. The tests alse serve as documented.
 
 ### 1. Y Combinator
 

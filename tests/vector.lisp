@@ -18,3 +18,15 @@
 (assert (equal? (vector-ref v 1) 99))
 (assert (equal? (vector-ref v 2) "123"))
 (assert (equal? (vector-ref v 3) 1.2))
+
+(vector-remove v 2)
+
+(assert (equal? (vector-ref v 2) 1.2))
+(assert (equal? (vector-ref v 1) 99))
+
+(defvar x 2)
+(vector-append v x)
+
+(vector-set v 3 3)
+(assert (= x 2))
+(assert (= 3 (vector-ref v 3)))

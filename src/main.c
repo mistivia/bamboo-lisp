@@ -31,12 +31,6 @@ int main(int argc, char **argv) {
             interp.stacktrace = interp.nil;
             mainret = -1; goto end;
         }
-        if (Interp_ref(&interp, ret)->type == kBreakSignal
-                || Interp_ref(&interp, ret)->type == kContinueSignal
-                || Interp_ref(&interp, ret)->type == kReturnSignal) {
-            fprintf(stderr, "Error: unexpected control flow signal.\n");
-            mainret = -1; goto end;
-        }
     }
 #ifdef WITHREADLINE
     Parser_set_readline(interp.parser);
