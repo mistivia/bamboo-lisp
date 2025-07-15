@@ -7,7 +7,7 @@ compile_commands.json
 .cache
 todo
 fibo.lisp
-debug.lisp
+debug*
 perf.data
 perf.data.old
 web-*

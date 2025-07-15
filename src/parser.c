@@ -103,7 +103,9 @@ int Parser_getchar(Parser *ctx) {
         ctx->str_cursor++;
         return ret;
     } else if (ctx->parse_type == kParseFile) {
-        return fgetc(ctx->fp);
+        int ret = fgetc(ctx->fp);
+        if (ret == '\n') ctx->ctx->linenum++;
+        return ret;
 #ifdef WITHREADLINE
     } else if (ctx->parse_type == kParseReadline) {
         if (ctx->readline_eof) return EOF;
@@ -240,6 +242,8 @@ static SExpRef build_list_from_vector(Interp *ctx, SExpRefVector elems) {
         SExpRef cur = *SExpRefVector_ref(&elems, i);
         ret = lisp_cons(ctx, cur, ret);
     }
+    Interp_ref(ctx, ret)->pair.filename = ctx->filename;
+    Interp_ref(ctx, ret)->pair.line = ctx->linenum;
     return ret;
 }
 
@@ -247,9 +251,9 @@ ParseResult parse_list(Parser *parser) {
     SExpRefVector elems;
     SExpRefVector_init(&elems);
     ParseResult ret;
-
     ret = expect_char(parser, '(');
     if (ParseResult_is_err(ret)) goto end;
+    int line = parser->ctx->linenum;
     skip_blank(parser);
     while (1) {
         if (Parser_peek(parser) == EOF) {
