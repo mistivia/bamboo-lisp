@@ -16,6 +16,7 @@ There is a WebAssembly build, you can [try it online](https://mistivia.github.io
 - Writing macro is easy with quasiquote, unquote, and slicing-unquote
 - No global state, you can run multiple interpreters in multiple threads
 - Exception and try-catch
+- Stacktrace for debugging
 - Support C-like control flow statements
     - return
     - break

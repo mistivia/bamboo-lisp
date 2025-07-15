@@ -61,6 +61,20 @@ void print_lisp_error(Interp *interp, SExpRef err) {
     }
 }
 
+const char *lisp_stacktrace_to_string(Interp *interp, SExpRef stacktrace) {
+    str_builder_t sb;
+    init_str_builder(&sb);
+    str_builder_append(&sb, "Stacktrace:\n");
+    for (SExpRef iter = stacktrace; !NILP(iter); iter = CDR(iter)) {
+        SExpRef i = CAR(iter);
+        SExpRef filename = CAR(i);
+        SExpRef linenum = CADR(i);
+        SExpRef sym = CADDR(i);
+        str_builder_append(&sb, "    %s:%d %s\n", REF(filename)->str, REF(linenum)->integer, REF(sym)->str);
+    }
+    return sb.buf;
+}
+
 void Interp_init(Interp *self) {
     self->recursion_depth = 0;
     self->gensym_cnt = 42;
@@ -103,6 +117,7 @@ void Interp_init(Interp *self) {
 
     self->stack = lisp_cons(self, self->top_level, self->nil);
     self->reg = self->nil;
+    self->stacktrace = self->nil;
 
     Interp_add_primitive(self, "eval", primitive_eval);
     Interp_add_primitive(self, "apply", primitive_apply);
@@ -295,6 +310,10 @@ SExpRef Interp_load_file(Interp *interp, const char *filename) {
     Parser_set_file(interp->parser, fp);
     SExpRef sexp, ret;
     ParseResult parse_result;
+    SExpRef old_filename = interp->filename;
+    int old_linenum = interp->linenum;
+    interp->filename = new_string(interp, filename);
+    interp->linenum = 1;
     while (1) {
         parse_result = parse_sexp(interp->parser);
         if (parse_result.errmsg != NULL) {
@@ -315,6 +334,8 @@ SExpRef Interp_load_file(Interp *interp, const char *filename) {
         if (Parser_is_end(interp->parser)) goto end;
     }
 end:
+    interp->filename = old_filename;
+    interp->linenum = old_linenum;
     fclose(fp);
     return ret;
 }
@@ -379,6 +400,7 @@ void Interp_gc(Interp *interp, SExpRef tmproot) {
     SExpPtrVector_push_back(&gcstack, REF(interp->stack));
     SExpPtrVector_push_back(&gcstack, REF(interp->top_level));
     SExpPtrVector_push_back(&gcstack, REF(interp->reg));
+    SExpPtrVector_push_back(&gcstack, REF(interp->stacktrace));
     // mark
     while (!SExpPtrVector_empty(&gcstack)) {
         SExpPtr obj = *SExpPtrVector_last(&gcstack);
@@ -391,6 +413,8 @@ void Interp_gc(Interp *interp, SExpRef tmproot) {
             child = REF(obj->pair.car);
             if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
             child = REF(obj->pair.cdr);
+            if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
+            child = REF(obj->pair.filename);
             if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
         } else if (obj->type == kFuncSExp) {
             child = REF(obj->func.args);
@@ -476,6 +500,8 @@ SExpRef lisp_cons(Interp *interp, SExpRef a, SExpRef b) {
     REF(obj)->type = kPairSExp;
     REF(obj)->pair.car = a;
     REF(obj)->pair.cdr = b;
+    REF(obj)->pair.filename = NIL;
+    REF(obj)->pair.line = -1;
     return obj;
 }
 
@@ -893,6 +919,9 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
         goto end;
     }
     SExpRef fn, funcallargs, args;
+    SExpRef filename = NIL;
+    SExpRef sym = NIL;
+    int line = -1;
     if (type == kPairSExp) {
         if (!lisp_check_list(interp, sexp)) {
             ret = new_error(interp, "eval: list not proper.\n");
@@ -901,6 +930,11 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
         if (REF(CAR(sexp))->type != kSymbolSExp) {
             ret = new_error(interp, "eval: first elem must be a symbol.\n");
             goto end;
+        }
+        if (!NILP(REF(sexp)->pair.filename)) {
+            line = REF(sexp)->pair.line;
+            filename = REF(sexp)->pair.filename;
+            sym = REF(sexp)->pair.car;
         }
         SExpRef symbol = CAR(sexp);
         fn = lisp_lookup_func(interp, symbol);
@@ -946,6 +980,13 @@ SExpRef lisp_eval(Interp *interp, SExpRef sexp, bool istail) {
     }
     ret = new_error(interp, "eval: unknown syntax.\n");
 end:
+    if (VALTYPE(ret) == kErrSignal || VALTYPE(ret) == kExceptionSignal) {
+        if (!NILP(filename)) {
+            interp->stacktrace =
+                CONS(CONS(filename, CONS(new_integer(interp, line), CONS(sym, NIL))),
+                     interp->stacktrace);
+        }
+    }
     POP_REG();
     Interp_gc(interp, ret);
     interp->recursion_depth--;

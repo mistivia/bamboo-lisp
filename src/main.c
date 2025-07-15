@@ -15,12 +15,20 @@ int main(int argc, char **argv) {
         SExpRef ret = Interp_load_file(&interp, filename);
         if (Interp_ref(&interp, ret)->type == kErrSignal) {
             fprintf(stderr, "Error: %s", Interp_ref(&interp, ret)->str);
+            const char *stacktrace = lisp_stacktrace_to_string(&interp, interp.stacktrace);
+            fprintf(stderr, "%s", stacktrace);
+            free((void*)stacktrace);
+            interp.stacktrace = interp.nil;
             mainret = -1; goto end;
         }
         if (Interp_ref(&interp, ret)->type == kExceptionSignal) {
             const char *exception_str = lisp_to_string(&interp, Interp_ref(&interp, ret)->ret);
             fprintf(stderr, "Uncatched exception: %s\n", exception_str);
             free((void*)exception_str);
+            const char *stacktrace = lisp_stacktrace_to_string(&interp, interp.stacktrace);
+            fprintf(stderr, "%s", stacktrace);
+            free((void*)stacktrace);
+            interp.stacktrace = interp.nil;
             mainret = -1; goto end;
         }
         if (Interp_ref(&interp, ret)->type == kBreakSignal

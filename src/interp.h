@@ -27,6 +27,9 @@ struct interp {
     SExpRef reg;
     SExpRef top_level;
     SExpRef nil;
+    SExpRef stacktrace;
+    SExpRef filename;
+    int32_t linenum;
     char *errmsg_buf;
     Parser *parser;
     int gensym_cnt;
@@ -75,6 +78,7 @@ SExpRef Interp_load_file(Interp *interp, const char *filename);
 #define PUSH_REG(_x) { interp->reg = CONS((_x), interp->reg); }
 #define POP_REG() { interp->reg = CDR(interp->reg);  }
 
+const char *lisp_stacktrace_to_string(Interp *interp, SExpRef stacktrace);
 const char* lisp_to_string(Interp *interp, SExpRef val);
 SExpRef lisp_macroexpand1(Interp *interp, SExpRef macro, SExpRef args);
 SExpRef lisp_nreverse(Interp *interp, SExpRef lst);

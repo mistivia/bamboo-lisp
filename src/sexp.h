@@ -16,6 +16,8 @@ typedef struct {
 typedef struct {
     SExpRef car;
     SExpRef cdr;
+    SExpRef filename;
+    int32_t line;
 } SExpPair;
 
 typedef struct {

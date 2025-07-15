@@ -15,7 +15,10 @@ SExpRef primitive_assert_exception(Interp *interp, SExpRef args, bool istail) {
 
 SExpRef primitive_assert_error(Interp *interp, SExpRef args, bool istail) {
     SExpRef eargs = lisp_eval_args(interp, args);
-    if (VALTYPE(eargs) == kErrSignal) return interp->t;
+    if (VALTYPE(eargs) == kErrSignal) {
+        interp->stacktrace = NIL;
+        return interp->t;
+    }
 
     const char *expstr = lisp_to_string(interp, CAR(args));
     SExpRef ret = new_error(interp, "assert-error failed, no error: %s.\n", expstr);
@@ -37,6 +40,7 @@ SExpRef primitive_try(Interp *interp, SExpRef args, bool istail) {
         return new_error(interp, "try: syntax error, catch is not a function.\n");
     }
     if (VALTYPE(ret) == kExceptionSignal) {
+        interp->stacktrace = NIL;
         PUSH_REG(catch_func);
         ret = lisp_apply(interp, catch_func, CONS(REF(ret)->ret, NIL), istail);
         POP_REG();
