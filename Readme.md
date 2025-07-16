@@ -64,7 +64,7 @@ You can use `load` to load a lisp script into the interpreter:
 
 ## Examples
 
-See `tests/` for more examples. The tests alse serve as documented.
+See `tests/` for more examples. The tests also serve as documents.
 
 ### 1. Y Combinator
 
