@@ -11,7 +11,6 @@ There is a WebAssembly build, you can [try it online](https://mistivia.github.io
 - The interpreter part is ~2500 LOC (excluding built-in functions)
 - Tail call optimization
 - Any C99 compiler should work
-- Depends only on C standard library
 - A simple mark-sweep GC
 - Writing macro is easy with quasiquote, unquote, and slicing-unquote
 - No global state, you can run multiple interpreters in multiple threads
@@ -28,11 +27,7 @@ To keep simplicity, Bamboo Lisp is a VERY SLOW tree-walking interpreter. The per
 
 ## Build
 
-Init submodule:
-
-```bash
-git submodule update --init --recursive
-```
+Install dependency first, see [algds](https://github.com/mistivia/algds) for details.
 
 Debug:
 
