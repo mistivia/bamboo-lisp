@@ -1,9 +1,9 @@
 mode ?= debug
 cc = gcc
 
-includes = -DWITHREADLINE -I3rdparty/algds/build/include/
+includes = -DWITHREADLINE -Ilibs/
 
-3rdlibs = 3rdparty/algds/build/lib/libalgds.a
+libs = libs/algds/libalgds.a
 ldflags = -lm -lreadline
 ifeq ($(mode), debug)
 	cflags = $(includes) \
@@ -13,7 +13,7 @@ else
 	cflags = $(includes) -flto -O2
 endif
 
-src = $(shell find src/ -name '*.c' -not -name 'main.c')
+src = $(shell find ./ -maxdepth 1 -name '*.c' -not -name 'main.c')
 obj = $(src:.c=.o)
 
 tests=$(shell ls tests/*.c)
@@ -27,23 +27,23 @@ web: web-bamboo-lisp.js
 
 web-bamboo-lisp.js: $(src)
 	-rm web-*
-	emcc -I3rdparty/algds/build/include $(src) 3rdparty/algds/src/*.c -o web-bamboo-lisp.js \
+	emcc -Ilibs/ $(src) libs/algds/*.c -o web-bamboo-lisp.js \
 		-s EXPORTED_FUNCTIONS="['_print_lisp_error', '_malloc', '_free', '_new_interp', '_lisp_to_string', _Interp_eval_string]" -s WASM=1 -s EXPORTED_RUNTIME_METHODS="['stringToUTF8', 'UTF8ToString']"
 
 install: bamboo-lisp
 	sudo cp bamboo-lisp /usr/local/bin/bamboo
 
-src/prelude.c: src/prelude.lisp
-	cat src/prelude.lisp | python scripts/genprelude.py > src/prelude.c
+prelude.c: prelude.lisp
+	cat prelude.lisp | python scripts/genprelude.py > prelude.c
 
-bamboo-lisp:  $(obj) src/main.o 3rdparty/algds/build/lib/libalgds.a
+bamboo-lisp:  $(obj) main.o libs/algds/libalgds.a
 	gcc $(cflags) -o $@ $^ $(ldflags)
 
 libbamboo-lisp.a: $(obj)
 	ar cr $@ $^
 
-3rdparty/algds/build/lib/libalgds.a:
-	cd 3rdparty/algds && \
+libs/algds/libalgds.a:
+	cd libs/algds && \
 		make profile=$(mode)
 
 test: bamboo-lisp $(tests_bin)
@@ -53,24 +53,25 @@ test: bamboo-lisp $(tests_bin)
 	@echo "Run scripts:"
 	./bamboo-lisp tests/test.lisp
 
-src/main.o:src/main.c
+main.o:main.c
 	$(cc) -c $(cflags) $< -MD -MF $@.d -o $@
 
 $(obj):%.o:%.c
 	$(cc) -c $(cflags) $< -MD -MF $@.d -o $@
 
-$(obj):%.o:$(3rdlibs)
+$(obj):%.o:$(libs)
 
-$(tests_bin):%.bin:%.c $(obj) $(3rdlibs)
-	$(cc) $(cflags) -Isrc/ $< $(obj) $(3rdlibs) -MD -MF $@.d -o $@ $(ldflags)
+$(tests_bin):%.bin:%.c $(obj) $(libs)
+	$(cc) $(cflags) -I./ -Ilibs/ $< $(obj) $(libs) -MD -MF $@.d -o $@ $(ldflags)
 
 clean:
 	-rm $(shell find tests/ -name '*.bin')
 	-rm $(shell find . -name '*.o' -or -name '*.a' -or -name '*.d')
+	-rm web-bamboo-lisp*
 	-rm bamboo-lisp
-	-cd 3rdparty/algds && make clean
+	-cd libs/algds && make clean
 
-DEPS := $(shell find . -name *.d)
+DEPS := $(shell find . -name '*.d')
 ifneq ($(DEPS),)
 include $(DEPS)
 endif
