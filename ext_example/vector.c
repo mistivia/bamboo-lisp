@@ -1,4 +1,3 @@
-#include "vector.h"
 #include "interp.h"
 #include "sexp.h"
 
@@ -112,7 +111,7 @@ static void vector_gcmark(Interp *interp, SExpPtrVector *gcstack, void *vself) {
 }
 
 
-void bamboo_lisp_init_vector(Interp *interp) {
+int bamboo_lisp_ext_init(Interp *interp) {
     bamboo_lisp_array_meta.type = "vector";
     bamboo_lisp_array_meta.free = &vector_free;
     bamboo_lisp_array_meta.gcmark = &vector_gcmark;
@@ -125,4 +124,5 @@ void bamboo_lisp_init_vector(Interp *interp) {
     Interp_add_userfunc(interp, "vector-remove", &vector_delete);
     Interp_add_userfunc(interp, "vector-length", &vector_length);
     Interp_add_userfunc(interp, "vector-set", &vector_set);
+    return 1;
 }
