@@ -12,8 +12,6 @@
 #include "parser.h"
 #include "prelude.h"
 
-#include "vector.h"
-
 #define BUFSIZE 1024
 
 bool SExpRef_eq(SExpRef a, SExpRef b) {
@@ -148,6 +146,7 @@ void Interp_init(Interp *self) {
     Interp_add_primitive(self, "assert-error", primitive_assert_error);
     Interp_add_primitive(self, "assert-exception", primitive_assert_exception);
     Interp_add_primitive(self, "load", primitive_load);
+    Interp_add_primitive(self, "loadext", primitive_loadext);
     Interp_add_primitive(self, "try", primitive_try);
     Interp_add_primitive(self, "unwind-protect", primitive_unwind_protect);
 
@@ -259,9 +258,6 @@ void Interp_init(Interp *self) {
 
     Interp_add_userfunc(self, "_gcstat", builtin_gcstat);
     Interp_add_userfunc(self, "_alwaysgc", builtin_alwaysgc);
-
-    // extentions
-    bamboo_lisp_init_vector(self);
 
     SExpRef ret = Interp_eval_string(self, bamboo_lisp_prelude);
     Interp *interp = self;

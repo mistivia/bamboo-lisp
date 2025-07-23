@@ -3,6 +3,8 @@
 #include "sexp.h"
 #include "parser.h"
 
+#include <dlfcn.h>
+
 SExpRef primitive_assert_exception(Interp *interp, SExpRef args, bool istail) {
     SExpRef eargs = lisp_eval_args(interp, args);
     if (VALTYPE(eargs) == kExceptionSignal) return interp->t;
@@ -67,6 +69,34 @@ SExpRef primitive_load(Interp *interp, SExpRef args, bool istail) {
     free(new_parser);
     interp->parser = old_parser;
     return ret;
+}
+
+typedef int (*BambooLispExtInitFn)(Interp *interp);
+
+SExpRef primitive_loadext(Interp *interp, SExpRef args, bool istail) {
+    if (CAR(interp->stack).idx != interp->top_level.idx) {
+        return new_error(interp, "loadext: loadext can only be in top level.\n");
+    }
+    if (LENGTH(args) != 1) return new_error(interp, "loadext: syntax error.\n");
+    args = lisp_eval_args(interp, args);
+    if (VALTYPE(CAR(args)) != kStringSExp) return new_error(interp, "loadext: syntax error.\n");
+    const char *filename = REF(CAR(args))->str;
+    void *handle = dlopen(filename, RTLD_LAZY);
+    if (!handle) {
+        return new_error(interp, "Failed to load library: %s\n", dlerror());
+    }
+    dlerror();
+    BambooLispExtInitFn init_func = (BambooLispExtInitFn)dlsym(handle, "bamboo_lisp_ext_init");
+    const char *error;
+    if ((error = dlerror()) != NULL) {
+        dlclose(handle);
+        return new_error(interp, "Failed to locate symbol: %s\n", error);
+    }
+    int ret = (*init_func)(interp);
+    if (ret < 0) {
+        return new_error(interp, "Failed to init ext: %s\n", filename);
+    }
+    return NIL;
 }
 
 SExpRef primitive_return(Interp *interp, SExpRef args, bool istail) {

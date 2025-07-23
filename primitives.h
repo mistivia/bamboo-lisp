@@ -6,6 +6,7 @@
 SExpRef primitive_assert_error(Interp *interp, SExpRef sexp, bool istail);
 SExpRef primitive_assert_exception(Interp *interp, SExpRef sexp, bool istail);
 SExpRef primitive_load(Interp *interp, SExpRef sexp, bool istail);
+SExpRef primitive_loadext(Interp *interp, SExpRef sexp, bool istail);
 SExpRef primitive_return(Interp *interp, SExpRef sexp, bool istail);
 SExpRef primitive_break(Interp *interp, SExpRef sexp, bool istail);
 SExpRef primitive_continue(Interp *interp, SExpRef sexp, bool istail);

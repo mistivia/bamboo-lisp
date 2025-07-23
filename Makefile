@@ -1,7 +1,7 @@
 mode ?= debug
 cc = gcc
 
-includes = -DWITHREADLINE 
+includes = -DWITHREADLINE -fPIC
 
 ldflags = -lm -lreadline -lalgds
 ifeq ($(mode), debug)
@@ -9,7 +9,7 @@ ifeq ($(mode), debug)
 		-g \
 		-fsanitize=address
 else 
-	cflags = $(includes) -g -O2
+	cflags = $(includes) -O2
 endif
 
 src = $(shell find ./ -maxdepth 1 -name '*.c' -not -name 'main.c')
@@ -20,8 +20,11 @@ tests_bin=$(tests:.c=.bin)
 
 all: bamboo-lisp
 
-install: bamboo-lisp
-	sudo cp bamboo-lisp /usr/local/bin/bamboo
+install: bamboo-lisp libbamboo-lisp.a
+	sudo cp bamboo-lisp /usr/local/bin/bamboo-lisp
+	sudo cp libbamboo-lisp.a /usr/local/lib/
+	sudo mkdir -p /usr/local/include/bamboo_lisp
+	sudo cp *.h /usr/local/include/bamboo_lisp/
 
 prelude.c: prelude.lisp
 	cat prelude.lisp | python scripts/genprelude.py > prelude.c
@@ -32,7 +35,10 @@ bamboo-lisp:  $(obj) main.o
 libbamboo-lisp.a: $(obj)
 	ar cr $@ $^
 
-test: bamboo-lisp $(tests_bin)
+ext_example/vector.so: ext_example/vector.c libbamboo-lisp.a
+	gcc -shared $(cflags) -I./ -o $@ $^ $(ldflags)
+
+test: bamboo-lisp $(tests_bin) ext_example/vector.so
 	@echo
 	@echo "Run tests:"
 	@scripts/runall.sh $(tests_bin)
@@ -52,7 +58,10 @@ $(tests_bin):%.bin:%.c $(obj) $(libs)
 
 clean:
 	-rm $(shell find tests/ -name '*.bin')
-	-rm $(shell find . -name '*.o' -or -name '*.a' -or -name '*.d')
+	-rm $(shell find . -name '*.so')
+	-rm $(shell find . -name '*.o')
+	-rm $(shell find . -name '*.a')
+	-rm $(shell find . -name '*.d')
 	-rm bamboo-lisp
 
 DEPS := $(shell find . -name '*.d')
