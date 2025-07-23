@@ -9,7 +9,7 @@ ifeq ($(mode), debug)
 		-g \
 		-fsanitize=address
 else 
-	cflags = $(includes) -O2
+	cflags = $(includes) -g -O2
 endif
 
 src = $(shell find ./ -maxdepth 1 -name '*.c' -not -name 'main.c')

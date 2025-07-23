@@ -93,6 +93,9 @@ void Interp_init(Interp *self) {
     SExpVector_push_back(&self->objs, sexp);
     self->nil = (SExpRef){i}; i++;
 
+    self->filename.idx = 0;
+    self->linenum = 1;
+
     sexp.type = kEnvSExp;
     sexp.env.parent= self->nil;
     sexp.env.bindings = self->nil;
