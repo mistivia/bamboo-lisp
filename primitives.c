@@ -1,9 +1,11 @@
 #include "primitives.h"
+
+#include <dlfcn.h>
+#include <algds/str.h>
+
 #include "interp.h"
 #include "sexp.h"
 #include "parser.h"
-
-#include <dlfcn.h>
 
 SExpRef primitive_assert_exception(Interp *interp, SExpRef args, bool istail) {
     SExpRef eargs = lisp_eval_args(interp, args);
@@ -83,7 +85,12 @@ SExpRef primitive_loadext(Interp *interp, SExpRef args, bool istail) {
     const char *filename = REF(CAR(args))->str;
     void *handle = dlopen(filename, RTLD_LAZY);
     if (!handle) {
-        return new_error(interp, "Failed to load library: %s\n", dlerror());
+        str_builder_t sb;
+        init_str_builder(&sb);
+        str_builder_append(&sb, "/usr/local/share/bamboo-lisp/exts/%s", filename);
+        handle = dlopen(sb.buf, RTLD_LAZY);
+        free(sb.buf);
+        if (!handle) return new_error(interp, "Failed to load library: %s\n", filename);
     }
     dlerror();
     BambooLispExtInitFn init_func = (BambooLispExtInitFn)dlsym(handle, "bamboo_lisp_ext_init");
