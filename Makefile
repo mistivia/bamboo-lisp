@@ -18,7 +18,7 @@ obj = $(src:.c=.o)
 tests=$(shell ls tests/*.c)
 tests_bin=$(tests:.c=.bin)
 
-all: bamboo-lisp
+all: bamboo-lisp ext_example/vector.so $(tests_bin)
 
 install: bamboo-lisp libbamboo-lisp.a
 	sudo cp bamboo-lisp /usr/local/bin/bamboo-lisp

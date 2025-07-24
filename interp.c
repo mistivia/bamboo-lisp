@@ -303,8 +303,15 @@ SExpRef Interp_load_file(Interp *interp, const char *filename) {
     FILE *fp = NULL;
     fp = fopen(filename, "r");
     if (fp == NULL) {
-        return new_error(interp, "Failed to open file: %s\n", filename);
-        goto end;
+        str_builder_t sb;
+        init_str_builder(&sb);
+        str_builder_append(&sb, "/usr/local/share/bamboo-lisp/libs/%s", filename);
+        fp = fopen(sb.buf, "r");
+        free(sb.buf);
+        if (fp == NULL) {
+            return new_error(interp, "Failed to open file: %s\n", filename);
+            goto end;
+        }
     }
     Parser_set_file(interp->parser, fp);
     SExpRef sexp, ret;
