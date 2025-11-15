@@ -5,9 +5,7 @@ includes = -DWITHREADLINE -fPIC
 
 ldflags = -lm -lreadline -lalgds
 ifeq ($(mode), debug)
-	cflags = $(includes) \
-		-g \
-		-fsanitize=address
+	cflags = $(includes) -g
 else 
 	cflags = $(includes) -O2
 endif
