@@ -1,10 +1,12 @@
 #include "interp.h"
 #include "sexp.h"
 
+#define VECTOR_TYPEID "ext.core.vector"
+
 LispUserdataMeta bamboo_lisp_array_meta;
 
 static bool is_vector_impl(Interp *interp, SExpRef vec) {
-    if (VALTYPE(vec) == kUserDataSExp && strcmp("vector", REF(vec)->userdata_meta->type) == 0) {
+    if (VALTYPE(vec) == kUserDataSExp && strcmp(VECTOR_TYPEID, REF(vec)->userdata_meta->type) == 0) {
         return true;
     }
     return false;
@@ -112,7 +114,7 @@ static void vector_gcmark(Interp *interp, SExpPtrVector *gcstack, void *vself) {
 
 
 int bamboo_lisp_ext_init(Interp *interp) {
-    bamboo_lisp_array_meta.type = "vector";
+    bamboo_lisp_array_meta.type = VECTOR_TYPEID;
     bamboo_lisp_array_meta.free = &vector_free;
     bamboo_lisp_array_meta.gcmark = &vector_gcmark;
 
