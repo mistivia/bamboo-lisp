@@ -16,7 +16,7 @@ installdir = /usr/local/lib/
 src = $(shell find ./ -maxdepth 1 -name '*.c' -not -name 'main.c')
 obj = $(src:.c=.o)
 
-extsrc = $(shell find ./exts/ -maxdepth 1 -name '*.c')
+extsrc = $(shell find ./ext_example/ -maxdepth 1 -name '*.c')
 extobj = $(extsrc:.c=.so)
 
 tests=$(shell ls tests/*.c)
@@ -31,8 +31,6 @@ install: bamboo-lisp libbamboo-lisp.so
 	sudo cp libbamboo-lisp.so $(installdir)
 	sudo mkdir -p /usr/local/include/bamboo_lisp
 	sudo cp *.h /usr/local/include/bamboo_lisp/
-	sudo mkdir -p /usr/local/share/bamboo-lisp/exts/
-	sudo cp exts/*.so /usr/local/share/bamboo-lisp/exts/
 
 prelude.c: prelude.lisp
 	cat prelude.lisp | python scripts/genprelude.py > prelude.c
