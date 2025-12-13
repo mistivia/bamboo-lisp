@@ -3,12 +3,15 @@ cc = gcc
 
 includes = -DWITHREADLINE -fPIC
 
-ldflags = -lm -lreadline -lalgds
+ldflags = -L./ -lm -lreadline -lalgds 
 ifeq ($(mode), debug)
 	cflags = $(includes) -g
 else 
 	cflags = $(includes) -O2
 endif
+
+curdir = ./
+installdir = /usr/local/lib/
 
 src = $(shell find ./ -maxdepth 1 -name '*.c' -not -name 'main.c')
 obj = $(src:.c=.o)
@@ -19,11 +22,13 @@ extobj = $(extsrc:.c=.so)
 tests=$(shell ls tests/*.c)
 tests_bin=$(tests:.c=.bin)
 
-all: bamboo-lisp $(extobj) $(tests_bin)
+all: bamboo-lisp exts $(tests_bin)
 
-install: bamboo-lisp libbamboo-lisp.a
+exts: $(extobj)
+
+install: bamboo-lisp libbamboo-lisp.so
 	sudo cp bamboo-lisp /usr/local/bin/bamboo-lisp
-	sudo cp libbamboo-lisp.a /usr/local/lib/
+	sudo cp libbamboo-lisp.so $(installdir)
 	sudo mkdir -p /usr/local/include/bamboo_lisp
 	sudo cp *.h /usr/local/include/bamboo_lisp/
 	sudo mkdir -p /usr/local/share/bamboo-lisp/exts/
@@ -32,14 +37,14 @@ install: bamboo-lisp libbamboo-lisp.a
 prelude.c: prelude.lisp
 	cat prelude.lisp | python scripts/genprelude.py > prelude.c
 
-bamboo-lisp:  $(obj) main.o
-	gcc $(cflags) -o $@ $^ $(ldflags)
+bamboo-lisp:  libbamboo-lisp.so main.o
+	gcc $(cflags) -o $@ $^ $(ldflags) -lbamboo-lisp -Wl,-rpath,$(curdir) -Wl,-rpath,$(installdir)
 
-libbamboo-lisp.a: $(obj)
-	ar cr $@ $^
+libbamboo-lisp.so: $(obj)
+	gcc -shared -o $@ $^ $(ldflags)
 
-$(extobj):%.so:%.c libbamboo-lisp.a
-	gcc -shared $(cflags) -I./ -o $@ $^ $(ldflags)
+$(extobj):%.so:%.c libbamboo-lisp.so
+	gcc -shared $(cflags) -I./ -o $@ $^ $(ldflags) -lbamboo-lisp -Wl,-rpath,$(curdir) -Wl,-rpath,$(installdir)
 
 test: bamboo-lisp $(tests_bin) exts
 	@echo
@@ -54,10 +59,8 @@ main.o:main.c
 $(obj):%.o:%.c
 	$(cc) -c $(cflags) $< -MD -MF $@.d -o $@
 
-$(obj):%.o:$(libs)
-
-$(tests_bin):%.bin:%.c $(obj) $(libs)
-	$(cc) $(cflags) -I./ -Ilibs/ $< $(obj) $(libs) -MD -MF $@.d -o $@ $(ldflags)
+$(tests_bin):%.bin:%.c libbamboo-lisp.so
+	$(cc) $(cflags) -I./ $< -MD -MF $@.d -o $@ $(ldflags) -lbamboo-lisp -Wl,-rpath,$(curdir) -Wl,-rpath,$(installdir)
 
 clean:
 	-rm $(shell find tests/ -name '*.bin')

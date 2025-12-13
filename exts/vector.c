@@ -112,7 +112,6 @@ static void vector_gcmark(Interp *interp, SExpPtrVector *gcstack, void *vself) {
     }
 }
 
-
 int bamboo_lisp_ext_init(Interp *interp) {
     bamboo_lisp_array_meta.type = VECTOR_TYPEID;
     bamboo_lisp_array_meta.free = &vector_free;
