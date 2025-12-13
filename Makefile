@@ -13,16 +13,21 @@ endif
 src = $(shell find ./ -maxdepth 1 -name '*.c' -not -name 'main.c')
 obj = $(src:.c=.o)
 
+extsrc = $(shell find ./exts/ -maxdepth 1 -name '*.c')
+extobj = $(extsrc:.c=.so)
+
 tests=$(shell ls tests/*.c)
 tests_bin=$(tests:.c=.bin)
 
-all: bamboo-lisp ext_example/vector.so $(tests_bin)
+all: bamboo-lisp $(extobj) $(tests_bin)
 
 install: bamboo-lisp libbamboo-lisp.a
 	sudo cp bamboo-lisp /usr/local/bin/bamboo-lisp
 	sudo cp libbamboo-lisp.a /usr/local/lib/
 	sudo mkdir -p /usr/local/include/bamboo_lisp
 	sudo cp *.h /usr/local/include/bamboo_lisp/
+	sudo mkdir -p /usr/local/share/bamboo-lisp/exts/
+	sudo cp exts/*.so /usr/local/share/bamboo-lisp/exts/
 
 prelude.c: prelude.lisp
 	cat prelude.lisp | python scripts/genprelude.py > prelude.c
@@ -33,10 +38,10 @@ bamboo-lisp:  $(obj) main.o
 libbamboo-lisp.a: $(obj)
 	ar cr $@ $^
 
-ext_example/vector.so: ext_example/vector.c libbamboo-lisp.a
+$(extobj):%.so:%.c libbamboo-lisp.a
 	gcc -shared $(cflags) -I./ -o $@ $^ $(ldflags)
 
-test: bamboo-lisp $(tests_bin) ext_example/vector.so
+test: bamboo-lisp $(tests_bin) exts
 	@echo
 	@echo "Run tests:"
 	@scripts/runall.sh $(tests_bin)

@@ -1,4 +1,4 @@
-(loadext "ext_example/vector.so")
+(loadext "exts/vector.so")
 
 (assert (vector? (make-vector)))
 (assert (not (vector? 1)))
