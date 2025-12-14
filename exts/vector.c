@@ -27,7 +27,7 @@ static SExpRef make_vector(Interp* interp, SExpRef args) {
     return ret;
 }
 
-static SExpRef vector_ref(Interp* interp, SExpRef args) {
+static SExpRef ext_vector_ref(Interp* interp, SExpRef args) {
     if (LENGTH(args) != 2) return new_error(interp, "vector-ref: wrong args num.\n");
     if (!is_vector_impl(interp, CAR(args))
             || REF(CADR(args))->type != kIntegerSExp) {
@@ -40,7 +40,7 @@ static SExpRef vector_ref(Interp* interp, SExpRef args) {
     return *SExpRefVector_ref(vec, n);
 }
 
-static SExpRef vector_append(Interp* interp, SExpRef args) {
+static SExpRef ext_vector_append(Interp* interp, SExpRef args) {
     if (LENGTH(args) != 2) return new_error(interp, "vector-append: wrong args num.\n");
     if (!is_vector_impl(interp, CAR(args))) return new_error(interp, "vector-append: first arg not a vector.\n");
 
@@ -50,7 +50,7 @@ static SExpRef vector_append(Interp* interp, SExpRef args) {
     return NIL;
 }
 
-static SExpRef vector_insert(Interp* interp, SExpRef args) {
+static SExpRef ext_vector_insert(Interp* interp, SExpRef args) {
     if (LENGTH(args) != 3) return new_error(interp, "vector-insert: wrong args num.\n");
     if (!is_vector_impl(interp, CAR(args)) || REF(CADR(args))->type != kIntegerSExp)
         return new_error(interp, "vector-insert: wrong types.\n");
@@ -62,7 +62,7 @@ static SExpRef vector_insert(Interp* interp, SExpRef args) {
     return NIL;
 }
 
-static SExpRef vector_delete(Interp* interp, SExpRef args) {
+static SExpRef ext_vector_delete(Interp* interp, SExpRef args) {
     if (LENGTH(args) != 2) return new_error(interp, "vector-remove: wrong args num.\n");
     if (!is_vector_impl(interp, CAR(args)) || REF(CADR(args))->type != kIntegerSExp)
         return new_error(interp, "vector-remove: wrong types.\n");
@@ -74,7 +74,7 @@ static SExpRef vector_delete(Interp* interp, SExpRef args) {
     return NIL;
 }
 
-static SExpRef vector_length(Interp* interp, SExpRef args) {
+static SExpRef ext_vector_length(Interp* interp, SExpRef args) {
    if (LENGTH(args) != 1) return new_error(interp, "vector-length: wrong args num.\n");
     if (!is_vector_impl(interp, CAR(args))) return new_error(interp, "vector-length: not a vector.\n");
 
@@ -82,7 +82,7 @@ static SExpRef vector_length(Interp* interp, SExpRef args) {
     return new_integer(interp, SExpRefVector_len(vec));
 }
 
-static SExpRef vector_set(Interp* interp, SExpRef args) {
+static SExpRef ext_vector_set(Interp* interp, SExpRef args) {
     if (LENGTH(args) != 3) return new_error(interp, "vector-set: wrong args num.\n");
     if (!is_vector_impl(interp, CAR(args)) || REF(CADR(args))->type != kIntegerSExp)
         return new_error(interp, "vector-set: wrong types.\n");
@@ -95,13 +95,13 @@ static SExpRef vector_set(Interp* interp, SExpRef args) {
     return NIL;
 }
 
-static void vector_free(void *vself) {
+static void ext_vector_free(void *vself) {
     SExpRefVector *self = vself;
     SExpRefVector_free(self);
     free(self);
 }
 
-static void vector_gcmark(Interp *interp, SExpPtrVector *gcstack, void *vself) {
+static void ext_vector_gcmark(Interp *interp, SExpPtrVector *gcstack, void *vself) {
     SExpRefVector *vec = (SExpRefVector *)vself;
     int vecsize = SExpRefVector_len(vec);
     for (int i = 0; i < vecsize; ++i) {
@@ -114,16 +114,16 @@ static void vector_gcmark(Interp *interp, SExpPtrVector *gcstack, void *vself) {
 
 int bamboo_lisp_ext_init(Interp *interp) {
     bamboo_lisp_array_meta.type = VECTOR_TYPEID;
-    bamboo_lisp_array_meta.free = &vector_free;
-    bamboo_lisp_array_meta.gcmark = &vector_gcmark;
+    bamboo_lisp_array_meta.free = &ext_vector_free;
+    bamboo_lisp_array_meta.gcmark = &ext_vector_gcmark;
 
     Interp_add_userfunc(interp, "vector?", &is_vector);
     Interp_add_userfunc(interp, "make-vector", &make_vector);
-    Interp_add_userfunc(interp, "vector-ref", &vector_ref);
-    Interp_add_userfunc(interp, "vector-append", &vector_append);
-    Interp_add_userfunc(interp, "vector-insert", &vector_insert);
-    Interp_add_userfunc(interp, "vector-remove", &vector_delete);
-    Interp_add_userfunc(interp, "vector-length", &vector_length);
-    Interp_add_userfunc(interp, "vector-set", &vector_set);
+    Interp_add_userfunc(interp, "vector-ref", &ext_vector_ref);
+    Interp_add_userfunc(interp, "vector-append", &ext_vector_append);
+    Interp_add_userfunc(interp, "vector-insert", &ext_vector_insert);
+    Interp_add_userfunc(interp, "vector-remove", &ext_vector_delete);
+    Interp_add_userfunc(interp, "vector-length", &ext_vector_length);
+    Interp_add_userfunc(interp, "vector-set", &ext_vector_set);
     return 1;
 }

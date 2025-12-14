@@ -59,13 +59,13 @@ static void dict_gcmark(Interp *interp, SExpPtrVector *gcstack, void *vself) {
 }
 
 
-static SExpRef lisp_is_dict(Interp* interp, SExpRef args) {
+static SExpRef ext_is_dict(Interp* interp, SExpRef args) {
     if (LENGTH(args) != 1) return new_error(interp, "dict?: wrongs args num.\n");
     return new_boolean(interp, is_dict_impl(interp, CAR(args)));
 }
 
 // (make-dict)
-static SExpRef lisp_make_dict(Interp* interp, SExpRef args) {
+static SExpRef ext_make_dict(Interp* interp, SExpRef args) {
     if (LENGTH(args) != 0) return new_error(interp, "make-dict: expects no args.\n");
 
     SExpRef ret = new_sexp(interp);
@@ -82,7 +82,7 @@ static SExpRef lisp_make_dict(Interp* interp, SExpRef args) {
 }
 
 // (dict-set dict key value)
-static SExpRef lisp_dict_set(Interp* interp, SExpRef args) {
+static SExpRef ext_dict_set(Interp* interp, SExpRef args) {
     if (LENGTH(args) != 3) return new_error(interp, "dict-set: wrong args num.\n");
     
     SExpRef r_dict = CAR(args);
@@ -107,7 +107,7 @@ static SExpRef lisp_dict_set(Interp* interp, SExpRef args) {
 }
 
 // (dict-get dict key) -> value or nil
-static SExpRef lisp_dict_get(Interp* interp, SExpRef args) {
+static SExpRef ext_dict_get(Interp* interp, SExpRef args) {
     if (LENGTH(args) != 2) return new_error(interp, "dict-get: wrong args num.\n");
 
     SExpRef r_dict = CAR(args);
@@ -127,7 +127,7 @@ static SExpRef lisp_dict_get(Interp* interp, SExpRef args) {
 }
 
 // (dict-remove dict key)
-static SExpRef lisp_dict_remove(Interp* interp, SExpRef args) {
+static SExpRef ext_dict_remove(Interp* interp, SExpRef args) {
     if (LENGTH(args) != 2) return new_error(interp, "dict-remove: wrong args num.\n");
 
     SExpRef r_dict = CAR(args);
@@ -150,16 +150,33 @@ static SExpRef lisp_dict_remove(Interp* interp, SExpRef args) {
     return NIL;
 }
 
-int bamboo_lisp_dict_ext_init(Interp *interp) {
+static SExpRef ext_dict_keys(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "dict-keys: wrong args num.\n");
+    SExpRef dict = CAR(args);
+    if (!is_dict_impl(interp, dict)) return new_error(interp, "dict-keys: first arg not a dict.\n");
+    DictMap *map = REF(dict)->userdata;
+    DictIter it = String2SExpRefTreeMap_min(map);
+    SExpRef lst = NIL;
+    while (it != NULL) {
+        const char* key_str = it->key;
+        SExpRef keyobj = new_string(interp, key_str);
+        lst = CONS(keyobj, lst);
+        it = String2SExpRefTreeMap_next(map, it);
+    }
+    lst = lisp_nreverse(interp, lst);
+    return lst;
+}
+
+int bamboo_lisp_ext_init(Interp *interp) {
     bamboo_lisp_dict_meta.type = DICT_TYPEID;
     bamboo_lisp_dict_meta.free = &dict_free;
     bamboo_lisp_dict_meta.gcmark = &dict_gcmark;
 
-    Interp_add_userfunc(interp, "dict?", &lisp_is_dict);
-    Interp_add_userfunc(interp, "make-dict", &lisp_make_dict);
-    Interp_add_userfunc(interp, "dict-get", &lisp_dict_get);
-    Interp_add_userfunc(interp, "dict-set", &lisp_dict_set);
-    Interp_add_userfunc(interp, "dict-remove", &lisp_dict_remove);
-    // TODO dict-keys
+    Interp_add_userfunc(interp, "dict?", &ext_is_dict);
+    Interp_add_userfunc(interp, "make-dict", &ext_make_dict);
+    Interp_add_userfunc(interp, "dict-get", &ext_dict_get);
+    Interp_add_userfunc(interp, "dict-set", &ext_dict_set);
+    Interp_add_userfunc(interp, "dict-remove", &ext_dict_remove);
+    Interp_add_userfunc(interp, "dict-keys", &ext_dict_keys);
     return 1;
 }
