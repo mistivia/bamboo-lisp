@@ -15,7 +15,7 @@ typedef String2SExpRefTreeMapNode DictNode;
 
 LispUserdataMeta bamboo_lisp_dict_meta;
 
-#define DICT_TYPEID "ext.core.dict"
+#define DICT_TYPEID "ext.dict"
 
 static bool is_dict_impl(Interp *interp, SExpRef obj) {
     if (VALTYPE(obj) == kUserDataSExp && strcmp(DICT_TYPEID, REF(obj)->userdata_meta->type) == 0) {
@@ -167,7 +167,7 @@ static SExpRef ext_dict_keys(Interp *interp, SExpRef args) {
     return lst;
 }
 
-int bamboo_lisp_ext_init(Interp *interp) {
+int bamboo_lisp_ext_dict_init(Interp *interp) {
     bamboo_lisp_dict_meta.type = DICT_TYPEID;
     bamboo_lisp_dict_meta.free = &dict_free;
     bamboo_lisp_dict_meta.gcmark = &dict_gcmark;

@@ -1,9 +1,9 @@
 mode ?= debug
 cc = gcc
 
-includes = -DWITHREADLINE -fPIC
+includes = -DWITHREADLINE
 
-ldflags = -L./ -lm -lreadline -lalgds 
+ldflags = -L./ -lm -lreadline -lalgds
 ifeq ($(mode), debug)
 	cflags = $(includes) -g
 else 
@@ -13,38 +13,26 @@ endif
 curdir = ./
 installdir = /usr/local/lib/
 
-src = $(shell find ./ -maxdepth 1 -name '*.c' -not -name 'main.c')
+src = $(shell find ./ -maxdepth 1 -name '*.c' -not -name 'main.c') $(shell find ./exts/ -maxdepth 1 -name '*.c')
 obj = $(src:.c=.o)
-
-extsrc = $(shell find ./ext_example/ -maxdepth 1 -name '*.c')
-extobj = $(extsrc:.c=.so)
 
 tests=$(shell ls tests/*.c)
 tests_bin=$(tests:.c=.bin)
 
-all: bamboo-lisp exts $(tests_bin)
+all: bamboo-lisp $(tests_bin)
 
-exts: $(extobj)
-
-install: bamboo-lisp libbamboo-lisp.so
-	sudo cp bamboo-lisp /usr/local/bin/bamboo-lisp
-	sudo cp libbamboo-lisp.so $(installdir)
-	sudo mkdir -p /usr/local/include/bamboo_lisp
-	sudo cp *.h /usr/local/include/bamboo_lisp/
+install: bamboo-lisp
+	cp bamboo-lisp /usr/local/bin/bamboo-lisp
+	mkdir -p /usr/local/include/bamboo_lisp
+	cp *.h /usr/local/include/bamboo_lisp/
 
 prelude.c: prelude.lisp
 	cat prelude.lisp | python scripts/genprelude.py > prelude.c
 
-bamboo-lisp:  libbamboo-lisp.so main.o
-	gcc $(cflags) -o $@ $^ $(ldflags) -lbamboo-lisp -Wl,-rpath,$(curdir) -Wl,-rpath,$(installdir)
+bamboo-lisp: main.o $(obj)
+	gcc $(cflags) -o $@ $< $(obj) $(ldflags) 
 
-libbamboo-lisp.so: $(obj)
-	gcc -shared -o $@ $^ $(ldflags)
-
-$(extobj):%.so:%.c libbamboo-lisp.so
-	gcc -shared $(cflags) -I./ -o $@ $^ $(ldflags) -lbamboo-lisp -Wl,-rpath,$(curdir) -Wl,-rpath,$(installdir)
-
-test: bamboo-lisp $(tests_bin) exts
+test: bamboo-lisp $(tests_bin)
 	@echo
 	@echo "Run tests:"
 	@scripts/runall.sh $(tests_bin)
@@ -57,8 +45,8 @@ main.o:main.c
 $(obj):%.o:%.c
 	$(cc) -c $(cflags) $< -MD -MF $@.d -o $@
 
-$(tests_bin):%.bin:%.c libbamboo-lisp.so
-	$(cc) $(cflags) -I./ $< -MD -MF $@.d -o $@ $(ldflags) -lbamboo-lisp -Wl,-rpath,$(curdir) -Wl,-rpath,$(installdir)
+$(tests_bin):%.bin:%.c $(obj)
+	$(cc) $(cflags) -I./ $< $(obj) -MD -MF $@.d -o $@ $(ldflags)
 
 clean:
 	-rm $(shell find tests/ -name '*.bin')

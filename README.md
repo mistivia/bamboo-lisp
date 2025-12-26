@@ -4,11 +4,13 @@ Embeddable & Hackable Lisp-2 Interpreter
 
 There is a WebAssembly build, you can [try it online](https://mistivia.github.io/bamboo-lisp/).
 
-## Features
+## About 
+
+**Features:**
 
 - Lisp-2 (more like Common Lisp or Emacs Lisp)
 - Lexical scoping
-- The interpreter part is ~2500 LOC (excluding built-in functions)
+- A small but extensible core
 - Tail call optimization
 - Any C99 compiler should work
 - A simple mark-sweep GC
@@ -21,25 +23,21 @@ There is a WebAssembly build, you can [try it online](https://mistivia.github.io
     - break
     - continue
 
-## Drawbacks
+**Drawbacks:**
 
 To keep simplicity, Bamboo Lisp is a VERY SLOW tree-walking interpreter. The performance is similar to other small Lisp interpreters like TinyScheme or very early Emacs Lisp, which is only 1/5 to 1/10 that of modern Python.
+
+**Summary:**
+
+If you want a TinyScheme-like embeddable lisp intereter but in Lisp-2 flavour, Bamboo Lisp is for you.
 
 ## Build
 
 Install dependency first, see [algds](https://github.com/mistivia/algds) for details.
 
-Debug:
-
 ```bash
-make
-```
-
-Release:
-
-```bash
-make clean
 make mode=release
+sudo make install
 ```
 
 ## Usage

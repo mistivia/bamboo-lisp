@@ -23,6 +23,8 @@
 (test-module char)
 (test-module bitwise)
 (test-module vector)
+(test-module dict)
+(test-module io)
 
 (princ "\n\nTest with intensive GC:\n\n")
 (_alwaysgc #t)
@@ -45,5 +47,7 @@
 (test-module char)
 (test-module bitwise)
 (test-module vector)
+(test-module dict)
+(test-module io)
 
 (exit)

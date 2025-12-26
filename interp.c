@@ -11,6 +11,7 @@
 #include "primitives.h"
 #include "parser.h"
 #include "prelude.h"
+#include "exts/exts.h"
 
 #define BUFSIZE 1024
 
@@ -258,6 +259,10 @@ void Interp_init(Interp *self) {
 
     Interp_add_userfunc(self, "_gcstat", builtin_gcstat);
     Interp_add_userfunc(self, "_alwaysgc", builtin_alwaysgc);
+
+    bamboo_lisp_ext_vector_init(self);
+    bamboo_lisp_ext_io_init(self);
+    bamboo_lisp_ext_dict_init(self);
 
     SExpRef ret = Interp_eval_string(self, bamboo_lisp_prelude);
     Interp *interp = self;
