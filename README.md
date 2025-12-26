@@ -10,7 +10,7 @@ There is a WebAssembly build, you can [try it online](https://mistivia.github.io
 
 - Lisp-2 (more like Common Lisp or Emacs Lisp)
 - Lexical scoping
-- A small but extensible core
+- < 5000 LoC
 - Tail call optimization
 - Any C99 compiler should work
 - A simple mark-sweep GC
