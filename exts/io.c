@@ -6,7 +6,7 @@
 #include <bamboo_lisp/interp.h>
 #include <bamboo_lisp/sexp.h>
 
-#define STREAM_TYPEID "ext.core.stream"
+#define STREAM_TYPEID "ext.stream"
 
 typedef struct {
     FILE *fp;
@@ -275,7 +275,7 @@ static void stream_gcmark(Interp *interp, SExpPtrVector *gcstack, void *vself) {
     (void)vself;
 }
 
-int bamboo_lisp_ext_init(Interp *interp) {
+int bamboo_lisp_ext_io_init(Interp *interp) {
     bamboo_lisp_stream_meta.type = STREAM_TYPEID;
     bamboo_lisp_stream_meta.free = &stream_free;
     bamboo_lisp_stream_meta.gcmark = &stream_gcmark;

@@ -1,7 +1,7 @@
 #include <bamboo_lisp/interp.h>
 #include <bamboo_lisp/sexp.h>
 
-#define VECTOR_TYPEID "ext.core.vector"
+#define VECTOR_TYPEID "ext.vector"
 
 LispUserdataMeta bamboo_lisp_array_meta;
 
@@ -112,7 +112,7 @@ static void ext_vector_gcmark(Interp *interp, SExpPtrVector *gcstack, void *vsel
     }
 }
 
-int bamboo_lisp_ext_init(Interp *interp) {
+int bamboo_lisp_ext_vector_init(Interp *interp) {
     bamboo_lisp_array_meta.type = VECTOR_TYPEID;
     bamboo_lisp_array_meta.free = &ext_vector_free;
     bamboo_lisp_array_meta.gcmark = &ext_vector_gcmark;

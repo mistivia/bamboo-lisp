@@ -1,5 +1,3 @@
-(loadext "./dict.so")
-
 (defvar d (make-dict))
 
 (dict-set d "a" 1)
