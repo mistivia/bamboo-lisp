@@ -46,9 +46,29 @@ C-like control flow within loops and functions.
 ```
 
 ## `try` and `throw`
-Exception handling.
+Exception handling. `try` takes a protected expression and a handler function. The handler function is called with the thrown value if an exception occurs.
+
 ```lisp
 (try
-  (throw "error message")
-  (catch (e) (princ e)))
+  (throw "something went wrong")
+  (lambda (e) (princ e)))
 ```
+
+## `unwind-protect`
+Ensures that cleanup forms are executed regardless of how the protected form exits (whether normally, or via `throw`, `error`, `return`, `break`, etc.).
+
+```lisp
+(let ((file (open-file "test.txt" "r")))
+  (unwind-protect
+    (read-line file)
+    (stream-close file)))
+```
+
+## Errors vs. Exceptions
+
+Bamboo Lisp distinguishes between **Errors** and **Exceptions**:
+
+- **Exceptions** (`throw`): Used for recoverable conditions or intentional non-local exits. They can be caught and handled using `try`.
+- **Errors** (`error`): Used for fatal, unrecoverable conditions (e.g., type errors, syntax errors). They **cannot** be caught by `try` and will typically terminate the execution with an error message.
+
+Both will trigger `unwind-protect` cleanup forms as they propagate up the call stack.
