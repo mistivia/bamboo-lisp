@@ -2,8 +2,6 @@
 
 Embeddable & Hackable Lisp-2 Interpreter
 
-There is a WebAssembly build, you can [try it online](https://mistivia.github.io/bamboo-lisp/).
-
 ## About 
 
 **Features:**
@@ -33,20 +31,18 @@ If you want a TinyScheme-like embeddable lisp intereter but in Lisp-2 flavour, B
 
 ## Build
 
-Install dependency first, see [algds](https://github.com/mistivia/algds) for details.
-
 ```bash
-make mode=release
+make
 sudo make install
 ```
 
 ## Usage
 
-After building, you can run the Bamboo Lisp interpreter using:
+After building and installing, you can run the Bamboo Lisp interpreter using:
 
 ```bash
-./bamboo-lisp # To enter the REPL (if applicable)
-./bamboo-lisp <filename.lisp> # To run a Lisp file
+bamboo-lisp # To enter the REPL (if applicable)
+bamboo-lisp <filename.lisp> # To run a Lisp file
 ```
 
 You can use `load` to load a lisp script into the interpreter:
@@ -101,4 +97,6 @@ See `tests/` for more examples. The tests also serve as documents.
 ;; ... (10 times)
 ```
 
+# License
 
+All files are licensed under GPLv3 if not specified otherwise.
