@@ -1,9 +1,9 @@
 mode ?= debug
 cc = gcc
 
-includes = -DWITHREADLINE
+includes = -I./ -DWITHREADLINE
 
-ldflags = -L./ -lm -lreadline -lalgds
+ldflags = -Lalgds/ -lm -lreadline -lalgds
 ifeq ($(mode), debug)
 	cflags = $(includes) -g
 else 
@@ -29,8 +29,11 @@ install: bamboo-lisp
 prelude.c: prelude.lisp
 	cat prelude.lisp | python scripts/genprelude.py > prelude.c
 
-bamboo-lisp: main.o $(obj)
+bamboo-lisp: main.o $(obj) algds/libalgds.a
 	gcc $(cflags) -o $@ $< $(obj) $(ldflags) 
+
+algds/libalgds.a: algds/*
+	cd algds && make
 
 test: bamboo-lisp $(tests_bin)
 	@echo
@@ -55,6 +58,7 @@ clean:
 	-rm $(shell find . -name '*.a')
 	-rm $(shell find . -name '*.d')
 	-rm bamboo-lisp
+	cd algds && make clean
 
 DEPS := $(shell find . -name '*.d')
 ifneq ($(DEPS),)
