@@ -1,6 +1,6 @@
 # Bamboo Lisp
 
-Embeddable & Hackable Lisp-2 Interpreter
+Embeddable Lisp-2 Interpreter
 
 ## About 
 
