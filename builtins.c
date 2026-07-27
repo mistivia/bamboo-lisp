@@ -325,6 +325,16 @@ SExpRef builtin_consp(Interp *interp, SExpRef args) {
     return new_boolean(interp, REF(CAR(args))->type == kPairSExp);
 }
 
+SExpRef builtin_symbolp(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "symbol?: arg num error.\n");
+    return new_boolean(interp, REF(CAR(args))->type == kSymbolSExp);
+}
+
+SExpRef builtin_stringp(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "string?: arg num error.\n");
+    return new_boolean(interp, REF(CAR(args))->type == kStringSExp);
+}
+
 SExpRef builtin_atomp(Interp *interp, SExpRef args) {
     if (LENGTH(args) != 1) return new_error(interp, "atom?: arg num error.\n");
     bool ret = false;

@@ -130,3 +130,97 @@
 (defun cadddr (x) (car (cdddr x)))
 (defun cddddr (x) (cdr (cdddr x)))
 (defun cdaddr (x) (cdr (caddr x)))
+
+;; ---------------------------------------------------------------------------
+;; pcase: ML-style pattern matching, a subset of Emacs Lisp's `pcase`.
+;;
+;;   (pcase EXPR
+;;     (PATTERN BODY...)
+;;     ...)
+;;
+;; EXPR is evaluated once; clauses are tried in order and the body of the
+;; first matching pattern is run (with the pattern's variables bound). If no
+;; clause matches the result is nil.
+;;
+;; Supported patterns:
+;;   _                wildcard, matches anything
+;;   SYMBOL           binds SYMBOL to the value
+;;   nil              matches the empty list
+;;   123 "s" #\c #t   self-evaluating literal, matched with equal?
+;;   'VALUE           matches a value equal? to VALUE (e.g. a literal symbol)
+;;   (pred FN)        matches when (FN value) is true
+;;   (guard EXPR)     matches when EXPR (using already-bound vars) is true
+;;   (and PAT...)     matches when every PAT matches
+;;   (or PAT...)      matches when some PAT matches
+;;   `TEMPLATE        structural match; ,PAT matches/binds a position,
+;;                    e.g. `(,a ,b) or `(,head . ,tail) or `(tag ,x)
+;;
+;; The helpers below run at macro-expansion time to compile a pattern into
+;; nested if/let code. ACC is a side-effect-free accessor expression for the
+;; value being matched; SUCC / FAIL are the code to run on match / mismatch.
+;; ---------------------------------------------------------------------------
+
+(defun pcase-body (body)
+  (if (null? body) 'nil (cons 'progn body)))
+
+(defun pcase-compile-and (pats acc succ fail)
+  (if (null? pats)
+      succ
+      (pcase-compile (car pats) acc
+                     (pcase-compile-and (cdr pats) acc succ fail)
+                     fail)))
+
+(defun pcase-compile-or (pats acc succ fail)
+  (if (null? pats)
+      fail
+      (pcase-compile (car pats) acc
+                     succ
+                     (pcase-compile-or (cdr pats) acc succ fail))))
+
+(defun pcase-compile-bq (tmpl acc succ fail)
+  (cond
+    ((null? tmpl) `(if (null? ,acc) ,succ ,fail))
+    ((cons? tmpl)
+       (if (eq? (car tmpl) 'unquote)
+           (pcase-compile (cadr tmpl) acc succ fail)
+           `(if (cons? ,acc)
+                ,(pcase-compile-bq (car tmpl) `(car ,acc)
+                     (pcase-compile-bq (cdr tmpl) `(cdr ,acc) succ fail)
+                     fail)
+                ,fail)))
+    (#t `(if (equal? ,acc ,(list 'quote tmpl)) ,succ ,fail))))
+
+(defun pcase-compile (pat acc succ fail)
+  (cond
+    ((eq? pat '_) succ)
+    ((null? pat) `(if (null? ,acc) ,succ ,fail))
+    ((symbol? pat) `(let ((,pat ,acc)) ,succ))
+    ((atom? pat) `(if (equal? ,acc ,pat) ,succ ,fail))
+    ((eq? (car pat) 'quote) `(if (equal? ,acc ,pat) ,succ ,fail))
+    ((eq? (car pat) 'pred)
+       (let ((fn (cadr pat)))
+         (if (symbol? fn)
+             `(if (,fn ,acc) ,succ ,fail)
+             `(if (funcall ,fn ,acc) ,succ ,fail))))
+    ((eq? (car pat) 'guard) `(if ,(cadr pat) ,succ ,fail))
+    ((eq? (car pat) 'and) (pcase-compile-and (cdr pat) acc succ fail))
+    ((eq? (car pat) 'or) (pcase-compile-or (cdr pat) acc succ fail))
+    ((eq? (car pat) 'quasiquote) (pcase-compile-bq (cadr pat) acc succ fail))
+    (#t (error "pcase: unknown pattern."))))
+
+;; Chain the clauses. Each clause's mismatch continuation is a thunk so the
+;; "rest of the clauses" is not duplicated across a pattern's several failure
+;; points.
+(defun pcase-compile-clauses (clauses vsym)
+  (if (null? clauses)
+      'nil
+      (let ((pat (caar clauses))
+            (body (cdar clauses))
+            (fsym (gensym)))
+        `(let ((,fsym (lambda () ,(pcase-compile-clauses (cdr clauses) vsym))))
+           ,(pcase-compile pat vsym (pcase-body body) `(funcall ,fsym))))))
+
+(defmacro pcase (expr . clauses)
+  (let ((vsym (gensym)))
+    `(let ((,vsym ,expr))
+       ,(pcase-compile-clauses clauses vsym))))

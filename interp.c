@@ -147,7 +147,6 @@ void Interp_init(Interp *self) {
     Interp_add_primitive(self, "assert-error", primitive_assert_error);
     Interp_add_primitive(self, "assert-exception", primitive_assert_exception);
     Interp_add_primitive(self, "load", primitive_load);
-    Interp_add_primitive(self, "loadext", primitive_loadext);
     Interp_add_primitive(self, "try", primitive_try);
     Interp_add_primitive(self, "unwind-protect", primitive_unwind_protect);
 
@@ -224,6 +223,8 @@ void Interp_init(Interp *self) {
     Interp_add_userfunc(self, "nthcdr", builtin_nthcdr);
     Interp_add_userfunc(self, "list?", builtin_listp);
     Interp_add_userfunc(self, "cons?", builtin_consp);
+    Interp_add_userfunc(self, "symbol?", builtin_symbolp);
+    Interp_add_userfunc(self, "string?", builtin_stringp);
     Interp_add_userfunc(self, "atom?", builtin_atomp);
     Interp_add_userfunc(self, "null?", builtin_nullp);
     Interp_add_userfunc(self, "member?", builtin_memberp);

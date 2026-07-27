@@ -21,6 +21,8 @@ SExpRef builtin_functionp(Interp *interp, SExpRef args);
 SExpRef builtin_charp(Interp *interp, SExpRef args);
 SExpRef builtin_listp(Interp *interp, SExpRef args);
 SExpRef builtin_consp(Interp *interp, SExpRef args);
+SExpRef builtin_symbolp(Interp *interp, SExpRef args);
+SExpRef builtin_stringp(Interp *interp, SExpRef args);
 SExpRef builtin_atomp(Interp *interp, SExpRef args);
 SExpRef builtin_nullp(Interp *interp, SExpRef args);
 SExpRef builtin_floatp(Interp *interp, SExpRef args);
