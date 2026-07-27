@@ -13,7 +13,7 @@ endif
 curdir = ./
 installdir = /usr/local/lib/
 
-src = $(shell find ./ -maxdepth 1 -name '*.c' -not -name 'main.c') $(shell find ./exts/ -maxdepth 1 -name '*.c')
+src = $(shell find ./ -maxdepth 1 -name '*.c' -not -name 'main.c')
 obj = $(src:.c=.o)
 
 tests=$(shell ls tests/*.c)

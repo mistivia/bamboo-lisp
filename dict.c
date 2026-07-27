@@ -3,8 +3,8 @@
 
 #include <algds/tree_map.h>
 #include <algds/basic_traits.h>
-#include <bamboo_lisp/interp.h>
-#include <bamboo_lisp/sexp.h>
+#include "interp.h"
+#include "sexp.h"
 
 TREE_MAP_DEF(String, SExpRef);
 TREE_MAP_IMPL(String, SExpRef);

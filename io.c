@@ -3,8 +3,8 @@
 #include <string.h>
 #include <ctype.h>
 
-#include <bamboo_lisp/interp.h>
-#include <bamboo_lisp/sexp.h>
+#include "interp.h"
+#include "sexp.h"
 
 #define STREAM_TYPEID "ext.stream"
 

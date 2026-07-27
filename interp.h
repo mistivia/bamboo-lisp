@@ -17,7 +17,7 @@ typedef struct interp Interp;
 HASH_TABLE_DEF(SExpRef, SExpRef);
 
 struct interp {
-    SExpVector objs;
+    SExpHeap objs;
     SExpRef2SExpRefHashTable topbindings;
     IntVector empty_space;
     String2IntHashTable symbols;
@@ -35,6 +35,9 @@ struct interp {
     int gensym_cnt;
     bool alwaysgc;
     int recursion_depth;
+    // Bumped on every new/updated global definition (defvar/defun/defmacro).
+    // Used to invalidate per-function macro-expansion caches.
+    int32_t version;
 };
 
 void Interp_init(Interp *self);
@@ -47,7 +50,7 @@ void Interp_add_userfunc(Interp *self, const char *name, LispUserFunc fn);
 SExpRef Interp_eval_string(Interp *interp, const char * str);
 SExpRef Interp_load_file(Interp *interp, const char *filename);
 
-#define REF(_x) (((_x).idx) >= 0 ? (&(interp->objs.buffer)[(_x).idx]) : NULL)
+#define REF(_x) (((_x).idx) >= 0 ? SExpHeap_ref(&interp->objs, (_x).idx) : NULL)
 #define CONS(_x, _y) (lisp_cons(interp, (_x), (_y)))
 #define NILP(_x) (lisp_nilp(interp, (_x)))
 #define LENGTH(_x) (lisp_length(interp, (_x)))

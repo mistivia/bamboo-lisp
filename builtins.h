@@ -3,6 +3,11 @@
 
 #include "interp.h"
 
+// Built-in modules (formerly the "exts"): registered directly at startup.
+int bamboo_lisp_ext_vector_init(Interp *interp);
+int bamboo_lisp_ext_io_init(Interp *interp);
+int bamboo_lisp_ext_dict_init(Interp *interp);
+
 SExpRef builtin_logand(Interp *interp, SExpRef args);
 SExpRef builtin_logior(Interp *interp, SExpRef args);
 SExpRef builtin_logxor(Interp *interp, SExpRef args);

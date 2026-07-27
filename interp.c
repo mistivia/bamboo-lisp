@@ -11,7 +11,6 @@
 #include "primitives.h"
 #include "parser.h"
 #include "prelude.h"
-#include "exts/exts.h"
 
 #define BUFSIZE 1024
 
@@ -76,12 +75,13 @@ const char *lisp_stacktrace_to_string(Interp *interp, SExpRef stacktrace) {
 
 void Interp_init(Interp *self) {
     self->recursion_depth = 0;
+    self->version = 0;
     self->gensym_cnt = 42;
     self->parser = malloc(sizeof(Parser));
     Parser_init(self->parser);
     self->parser->ctx = self;
     self->errmsg_buf = malloc(BUFSIZE);
-    SExpVector_init(&self->objs);
+    SExpHeap_init(&self->objs);
     IntVector_init(&self->empty_space);
     SExpRef2SExpRefHashTable_init(&self->topbindings);
     String2IntHashTable_init(&self->symbols);
@@ -89,7 +89,7 @@ void Interp_init(Interp *self) {
     SExp sexp;
     sexp.marked = false;
     sexp.type = kNilSExp;
-    SExpVector_push_back(&self->objs, sexp);
+    SExpHeap_push(&self->objs, sexp);
     self->nil = (SExpRef){i}; i++;
 
     self->filename.idx = 0;
@@ -98,22 +98,22 @@ void Interp_init(Interp *self) {
     sexp.type = kEnvSExp;
     sexp.env.parent= self->nil;
     sexp.env.bindings = self->nil;
-    SExpVector_push_back(&self->objs, sexp);
+    SExpHeap_push(&self->objs, sexp);
     self->top_level = (SExpRef){i}; i++;
 
     sexp.type = kBooleanSExp;
     sexp.boolean = true;
-    SExpVector_push_back(&self->objs, sexp);
+    SExpHeap_push(&self->objs, sexp);
     self->t= (SExpRef){i}; i++;
 
     sexp.type = kBooleanSExp;
     sexp.boolean = false;
-    SExpVector_push_back(&self->objs, sexp);
+    SExpHeap_push(&self->objs, sexp);
     self->f = (SExpRef){i}; i++;
 
     sexp.type = kEmptySExp;
     for (; i < 1024; i++) {
-        SExpVector_push_back(&self->objs, sexp);
+        SExpHeap_push(&self->objs, sexp);
         IntVector_push_back(&self->empty_space, i);
     }
 
@@ -358,8 +358,8 @@ void Interp_add_userfunc(Interp *interp, const char *name, LispUserFunc fn) {
 }
 
 void Interp_free(Interp *self) {
-    for (size_t i = 0; i < SExpVector_len(&self->objs); i++) {
-        SExp *obj = SExpVector_ref(&self->objs, i);
+    for (int i = 0; i < SExpHeap_len(&self->objs); i++) {
+        SExp *obj = SExpHeap_ref(&self->objs, i);
         if (obj->type == kStringSExp) {
             free((void*)obj->str);
         }
@@ -375,7 +375,7 @@ void Interp_free(Interp *self) {
         free((void*)iter->key);
     }
     String2IntHashTable_free(&self->symbols);
-    SExpVector_free(&self->objs);
+    SExpHeap_free(&self->objs);
     IntVector_free(&self->empty_space);
     SExpRef2SExpRefHashTable_free(&self->topbindings);
     free(self->errmsg_buf);
@@ -384,9 +384,8 @@ void Interp_free(Interp *self) {
 }
 
 SExp* Interp_ref(Interp *self, SExpRef ref) {
-    if (ref.idx > SExpVector_len(&self->objs)) return NULL;
-    SExp *res = SExpVector_ref(&self->objs, ref.idx);
-    return res;
+    if (ref.idx < 0 || ref.idx >= SExpHeap_len(&self->objs)) return NULL;
+    return SExpHeap_ref(&self->objs, ref.idx);
 }
 
 void Interp_add_primitive(Interp *self, const char *name, LispPrimitive fn) {
@@ -397,7 +396,7 @@ void Interp_add_primitive(Interp *self, const char *name, LispPrimitive fn) {
 
 void Interp_gc(Interp *interp, SExpRef tmproot) {
     int freesize = IntVector_len(&interp->empty_space);
-    int heapsize = SExpVector_len(&interp->objs);
+    int heapsize = SExpHeap_len(&interp->objs);
     if (freesize > (heapsize >> 4) && !interp->alwaysgc) {
         return;
     }
@@ -434,6 +433,8 @@ void Interp_gc(Interp *interp, SExpRef tmproot) {
             if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
             child = REF(obj->func.env);
             if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
+            child = REF(obj->func.body_cache);
+            if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
         } else if (obj->type == kEnvSExp) {
             child = REF(obj->env.bindings);
             if (child && !child->marked) SExpPtrVector_push_back(&gcstack, child);
@@ -469,8 +470,8 @@ void Interp_gc(Interp *interp, SExpRef tmproot) {
     }
     SExpPtrVector_free(&gcstack);
     // sweep
-    for (int i = 0; i < SExpVector_len(&interp->objs); i++) {
-        SExp *obj = SExpVector_ref(&interp->objs, i);
+    for (int i = 0; i < SExpHeap_len(&interp->objs); i++) {
+        SExp *obj = SExpHeap_ref(&interp->objs, i);
         if (obj->marked) {
             obj->marked = false;
             continue;
@@ -487,17 +488,17 @@ void Interp_gc(Interp *interp, SExpRef tmproot) {
         IntVector_push_back(&interp->empty_space, i);
     }
     // enlarge heap
-    heapsize = SExpVector_len(&interp->objs);
+    heapsize = SExpHeap_len(&interp->objs);
     int usedsize = heapsize - IntVector_len(&interp->empty_space);
     if (heapsize < usedsize * 4) {
         SExp sexp;
         sexp.marked = false;
         sexp.type = kEmptySExp;
-        while (SExpVector_len(&interp->objs) < usedsize * 4) {
-            SExpVector_push_back(&interp->objs, sexp);
-            IntVector_push_back(&interp->empty_space, SExpVector_len(&interp->objs) - 1);
+        while (SExpHeap_len(&interp->objs) < usedsize * 4) {
+            int idx = SExpHeap_push(&interp->objs, sexp);
+            IntVector_push_back(&interp->empty_space, idx);
         }
-    }        
+    }
 }
 
 bool lisp_truep(Interp *interp, SExpRef a) {
@@ -634,7 +635,172 @@ error:
     return new_error(interp, "macroexpand: syntax error.\n");
 }
 
+// ---- Recursive macro expansion (macroexpand-all) --------------------------
+//
+// These helpers walk a piece of code and expand every macro call in an
+// evaluated position, returning a fresh structure. Positions that the
+// evaluator does not treat as calls (quoted data, binding names, parameter
+// lists) are preserved verbatim so the expanded body evaluates identically to
+// the original. The result is cached on the function object (see
+// get_expanded_body) so macros are only expanded once per definition version.
+//
+// GC note: expanding a macro runs arbitrary Lisp code and can trigger GC, so
+// every partially-built result and every source cursor is kept alive through
+// the reg root while a nested expansion is in progress.
+
+static SExpRef macroexpand_all(Interp *interp, SExpRef form);
+
+// True for head symbols whose form must be left untouched: either the operand
+// is unevaluated data (quote/quasiquote/macroexpand-1) or the form is only
+// legal at top level and never executes inside a function body (the def-forms).
+static bool mexpand_leave_form(const char *name) {
+    return strcmp(name, "quote") == 0
+        || strcmp(name, "quasiquote") == 0
+        || strcmp(name, "macroexpand-1") == 0
+        || strcmp(name, "defun") == 0
+        || strcmp(name, "defmacro") == 0
+        || strcmp(name, "defvar") == 0;
+}
+
+// Expand every element of a proper list as an independent expression.
+static SExpRef macroexpand_list(Interp *interp, SExpRef lst) {
+    SExpRef ret = NIL;
+    SExpRef cur = lst;
+    while (VALTYPE(cur) == kPairSExp) {
+        PUSH_REG(ret);
+        PUSH_REG(cur);
+        SExpRef ex = macroexpand_all(interp, CAR(cur));
+        POP_REG();
+        POP_REG();
+        ret = CONS(ex, ret);
+        cur = CDR(cur);
+    }
+    return lisp_nreverse(interp, ret);
+}
+
+// (let ((name init)...) ...) : keep every binding name, expand every init.
+static SExpRef macroexpand_let_bindings(Interp *interp, SExpRef bindings) {
+    SExpRef ret = NIL;
+    SExpRef cur = bindings;
+    while (VALTYPE(cur) == kPairSExp) {
+        SExpRef b = CAR(cur);
+        SExpRef nb;
+        if (VALTYPE(b) == kPairSExp && lisp_check_list(interp, b)
+                && LENGTH(b) == 2 && VALTYPE(CAR(b)) == kSymbolSExp) {
+            SExpRef name = CAR(b);
+            PUSH_REG(ret);
+            PUSH_REG(cur);
+            SExpRef init = macroexpand_all(interp, CADR(b));
+            POP_REG();
+            POP_REG();
+            nb = CONS(init, NIL);
+            nb = CONS(name, nb);
+        } else {
+            nb = b;
+        }
+        ret = CONS(nb, ret);
+        cur = CDR(cur);
+    }
+    return lisp_nreverse(interp, ret);
+}
+
+static SExpRef macroexpand_all(Interp *interp, SExpRef form) {
+    if (VALTYPE(form) != kPairSExp) return form;
+    // Only touch proper lists; anything else is left for the evaluator to
+    // report as it would have originally.
+    if (!lisp_check_list(interp, form)) return form;
+
+    // Expand macros at the head until the head is no longer a macro call.
+    while (1) {
+        SExpRef head = CAR(form);
+        if (VALTYPE(head) != kSymbolSExp) break;
+        if (mexpand_leave_form(REF(head)->str)) return form;
+        SExpRef fn = lisp_lookup_func(interp, head);
+        if (CTL_FL(fn) || VALTYPE(fn) != kMacroSExp) break;
+        PUSH_REG(form);
+        SExpRef expanded = lisp_macroexpand1(interp, fn, CDR(form));
+        POP_REG();
+        // On expansion failure keep the original so the evaluator reports the
+        // same error it would have without caching.
+        if (CTL_FL(expanded)) return form;
+        form = expanded;
+        if (VALTYPE(form) != kPairSExp) return form;
+        if (!lisp_check_list(interp, form)) return form;
+    }
+
+    SExpRef head = CAR(form);
+    if (VALTYPE(head) == kSymbolSExp) {
+        const char *name = REF(head)->str;
+        if (strcmp(name, "lambda") == 0) {
+            // (lambda params body...) : params kept, body expanded.
+            if (LENGTH(form) < 2) return form;
+            SExpRef params = CADR(form);
+            PUSH_REG(form);
+            SExpRef ebody = macroexpand_list(interp, CDDR(form));
+            POP_REG();
+            SExpRef res = CONS(params, ebody);
+            res = CONS(head, res);
+            return res;
+        }
+        if (strcmp(name, "let") == 0) {
+            // (let bindings body...) : names kept, inits and body expanded.
+            if (LENGTH(form) < 2) return form;
+            PUSH_REG(form);
+            SExpRef ebindings = macroexpand_let_bindings(interp, CADR(form));
+            PUSH_REG(ebindings);
+            SExpRef ebody = macroexpand_list(interp, CDDR(form));
+            POP_REG();
+            POP_REG();
+            SExpRef res = CONS(ebindings, ebody);
+            res = CONS(head, res);
+            return res;
+        }
+        if (strcmp(name, "cond") == 0) {
+            // (cond (test exp)...) : every clause element is an expression.
+            SExpRef ret = NIL;
+            SExpRef cur = CDR(form);
+            while (VALTYPE(cur) == kPairSExp) {
+                SExpRef clause = CAR(cur);
+                SExpRef ec;
+                if (VALTYPE(clause) == kPairSExp && lisp_check_list(interp, clause)) {
+                    PUSH_REG(ret);
+                    PUSH_REG(cur);
+                    ec = macroexpand_list(interp, clause);
+                    POP_REG();
+                    POP_REG();
+                } else {
+                    ec = clause;
+                }
+                ret = CONS(ec, ret);
+                cur = CDR(cur);
+            }
+            ret = lisp_nreverse(interp, ret);
+            return CONS(head, ret);
+        }
+    }
+
+    // Ordinary call or special form whose operands are all evaluated.
+    return macroexpand_list(interp, form);
+}
+
+// Return the macro-expanded body of a function, (re)building and caching it
+// when the cache is missing or stale.
+static SExpRef get_expanded_body(Interp *interp, SExpRef fn) {
+    if (REF(fn)->func.cache_version == interp->version
+            && REF(fn)->func.body_cache.idx >= 0) {
+        return REF(fn)->func.body_cache;
+    }
+    int32_t ver = interp->version;
+    PUSH_REG(fn);
+    SExpRef expanded = macroexpand_list(interp, REF(fn)->func.body);
+    POP_REG();
+    REF(fn)->func.body_cache = expanded;
+    REF(fn)->func.cache_version = ver;
+    return expanded;
+}
+
 void lisp_defun(Interp *interp, SExpRef name, SExpRef val) {
+    interp->version++;
     SExpRef binding = REF(interp->top_level)->env.bindings;
     while (REF(binding)->type != kNilSExp) {
         if (name.idx == REF(binding)->binding.name.idx) {
@@ -653,6 +819,7 @@ void lisp_defun(Interp *interp, SExpRef name, SExpRef val) {
 }
 
 void lisp_defvar(Interp *interp, SExpRef name, SExpRef val) {
+    interp->version++;
     SExpRef binding = REF(interp->top_level)->env.bindings;
     while (REF(binding)->type != kNilSExp) {
         if (name.idx == REF(binding)->binding.name.idx) {
@@ -863,7 +1030,7 @@ SExpRef lisp_apply(Interp *interp, SExpRef fn, SExpRef args, bool istail) {
             return env;
         }
         interp->stack = CONS(env, interp->stack);
-        iter = REF(fn)->func.body;
+        iter = get_expanded_body(interp, fn);
         while (!NILP(iter)) {
             exp = CAR(iter);
             if (NILP(CDR(iter))) {
@@ -1019,8 +1186,8 @@ SExpRef new_sexp(Interp *interp) {
         SExp sexp;
         sexp.type = kEmptySExp;
         sexp.marked = false;
-        SExpVector_push_back(&interp->objs, sexp);
-        return (SExpRef){ SExpVector_len(&interp->objs) - 1 };
+        int idx = SExpHeap_push(&interp->objs, sexp);
+        return (SExpRef){ idx };
     }
     int idx = *IntVector_ref(&interp->empty_space, IntVector_len(&interp->empty_space) - 1);
     IntVector_pop(&interp->empty_space);
@@ -1049,6 +1216,8 @@ SExpRef new_lambda(Interp *interp, SExpRef param, SExpRef body, SExpRef env) {
     REF(ret)->func.args = param;
     REF(ret)->func.body = body;
     REF(ret)->func.env = env;
+    REF(ret)->func.body_cache = interp->nil;
+    REF(ret)->func.cache_version = -1;
     return ret;
 }
 

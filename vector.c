@@ -1,5 +1,5 @@
-#include <bamboo_lisp/interp.h>
-#include <bamboo_lisp/sexp.h>
+#include "interp.h"
+#include "sexp.h"
 
 #define VECTOR_TYPEID "ext.vector"
 

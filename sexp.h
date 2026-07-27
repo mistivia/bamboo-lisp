@@ -24,6 +24,11 @@ typedef struct {
     SExpRef args;
     SExpRef body;
     SExpRef env;
+    // Cache of the fully macro-expanded body, tagged with the interpreter
+    // version at which it was computed. Rebuilt lazily on apply whenever the
+    // version no longer matches. cache_version < 0 means "no cache yet".
+    SExpRef body_cache;
+    int32_t cache_version;
 } SExpFunc;
 
 struct interp;
@@ -120,6 +125,36 @@ void SExpRef_show(SExpRef self, FILE* fp);
 void SExpPtr_show(SExpPtr self, FILE* fp);
 
 VECTOR_DEF(SExp);
+
+// Paged object heap.
+//
+// Objects live in fixed-size chunks that are allocated once and never moved.
+// Growing the heap only allocates a fresh chunk (and possibly reallocates the
+// small array of chunk pointers), so a `SExp *` obtained from SExpHeap_ref
+// stays valid for the lifetime of the object even across later allocations.
+// This is what makes it safe to hold a `SExp *` across a call that allocates
+// (a flat, reallocating vector would move every object and dangle the pointer).
+#define SEXP_HEAP_CHUNK 4096
+
+typedef struct {
+    SExp **chunks;      // array of chunk base pointers
+    int chunk_count;    // number of chunks allocated
+    int chunk_cap;      // capacity of the `chunks` array
+    int size;           // number of slots handed out so far
+} SExpHeap;
+
+void SExpHeap_init(SExpHeap *heap);
+void SExpHeap_free(SExpHeap *heap);
+// Append `value` and return its index.
+int SExpHeap_push(SExpHeap *heap, SExp value);
+
+static inline SExp *SExpHeap_ref(SExpHeap *heap, int idx) {
+    return &heap->chunks[idx / SEXP_HEAP_CHUNK][idx % SEXP_HEAP_CHUNK];
+}
+
+static inline int SExpHeap_len(SExpHeap *heap) {
+    return heap->size;
+}
 
 #endif
 
