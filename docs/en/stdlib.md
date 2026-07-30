@@ -8,7 +8,12 @@ noted otherwise they evaluate all their arguments.
 
 - `(+ ...)`, `(- ...)`, `(* ...)`, `(/ ...)` — sum, difference, product,
   division. `/` yields a real when the result isn't integral.
-- `(i/ a b)` — integer division; `(mod a b)` — modulo.
+- `(i/ a b)` — integer division (truncates toward zero).
+- `(mod a b)` — floored modulo: the result takes the sign of the divisor, so
+  `(mod -3 100)` is `97` (as in Common Lisp / Emacs Lisp).
+- `(rem a b)` — truncating remainder: the result takes the sign of the dividend,
+  so `(rem -3 100)` is `-3` (as in C).
+- Dividing by zero is an error, not a crash.
 - `(abs x)`, `(min ...)`, `(max ...)`.
 - `(floor x)`, `(ceiling x)`, `(round x)`, `(truncate x)`.
 - `(expt b e)` / `(pow b e)`, `(sqrt x)`, `(cbrt x)`, `(exp x)`, `(ln x)`,
@@ -37,10 +42,14 @@ prelude helpers `zero?`, `plus?`, `minus?`, `contains?` (`(contains? x lst)`).
   `(set-nth n lst v)`, `(set-nthcdr n lst v)`, `(last lst)`.
 - `(reverse lst)`, `(nreverse lst)` (destructive), `(append ...)`,
   `(nconc ...)` (destructive).
-- Higher order: `(map f lst)`, `(filter pred lst)`, `(remove pred lst)`,
+- Higher order: `(map f lst)`, `(filter pred lst)` (keeps the elements the
+  predicate accepts), `(remove pred lst)` (keeps the others),
   `(count pred lst)`, `(foreach f lst)`, `(foldl f init lst)`.
 - Prelude: `(find x lst)`, `(take n lst)`, `(drop n lst)`,
-  `(take-while pred lst)`, `(drop-while pred lst)`, `(sublist start end lst)`.
+  `(take-while pred lst)`, `(drop-while pred lst)`, `(sublist start end lst)`,
+  `(sort lst pred)` — stable merge sort, `pred` being a "strictly less"
+  predicate, and `(merge-sorted a b pred)` for two already sorted lists.
+- Prelude conversions: `(list->vector lst)`, `(vector->list vec)`.
 
 ## Strings
 
@@ -51,6 +60,12 @@ prelude helpers `zero?`, `plus?`, `minus?`, `contains?` (`(contains? x lst)`).
 - Comparison: `string=`, `string/=`, `string<`, `string>`, `string<=`,
   `string>=`.
 - `(split-string s sep)`, `(strip-string s)`.
+- `(string-length s)`, `(string-ref s i)` — the `i`th character.
+- `(substring s start)` / `(substring s start end)` — `end` defaults to the end
+  of the string; `start` and `end` must be within it.
+- `(string->list s)`, `(list->string chars)`.
+- `(string->number s)` — an integer or a real, or `nil` when `s` (ignoring
+  surrounding blanks) is not a number; `(number->string n)`.
 
 ## Characters
 
@@ -80,6 +95,9 @@ prelude helpers `zero?`, `plus?`, `minus?`, `contains?` (`(contains? x lst)`).
 
 - `(when test body...)`, `(unless test body...)`.
 - `(incq place)`, `(decq place)` — increment / decrement in place.
+- `(dolist (x lst) body...)`, `(dotimes (i n) body...)` — loops. The cursor and
+  the counter are advanced before `body` runs, so `break` and `continue` behave
+  as they do in a plain `while`.
 - `(pcase ...)` — pattern matching (see the [Language Reference](language.md)).
 
 ---
@@ -90,7 +108,8 @@ These are registered at startup (no separate loading step needed).
 
 ## Mutable vectors (`vector.c`)
 
-- `(make-vector)`, `(vector? x)`.
+- `(make-vector)` / `(make-vector size)` / `(make-vector size fill)`,
+  `(vector? x)`.
 - `(vector-length v)`, `(vector-ref v i)`, `(vector-set v i x)`.
 - `(vector-append v x)`, `(vector-insert v i x)`, `(vector-remove v i)`.
 
@@ -106,5 +125,6 @@ Keys are strings.
 
 - `(open-file path mode)`, `(stream? x)`, `(stream-close s)`.
 - Reading: `(read-char s)`, `(read-line s)`, `(read-integer s)`,
-  `(read-number s)`, `(lines s)`.
+  `(read-number s)`, `(lines s)`. The stream argument may be omitted, in which
+  case these read standard input.
 - Writing: `(write-char s c)`, `(write-obj s x)`.

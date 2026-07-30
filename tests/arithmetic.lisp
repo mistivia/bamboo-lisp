@@ -42,3 +42,16 @@
 (assert-error (* 1 "a"))
 (assert-error (/ 1 "a"))
 
+
+;; mod is floored (the sign follows the divisor, as in Common Lisp / Emacs
+;; Lisp), rem truncates (as in C).
+(assert (= 97 (mod -3 100)))
+(assert (= -3 (rem -3 100)))
+(assert (= -97 (mod 3 -100)))
+(assert (= 3 (rem 3 -100)))
+(assert (= 0 (mod 100 100)))
+(assert (= 1 (rem 11 5)))
+
+(assert-error (i/ 1 0))
+(assert-error (mod 1 0))
+(assert-error (rem 1 0))

@@ -251,12 +251,17 @@ SExpRef primitive_let(Interp *interp, SExpRef args, bool istail) {
         iter = CDR(iter);
     }
 
+    // The body is evaluated the same way whether or not `let` sits in tail
+    // position: every form but the last normally, the last one in tail
+    // position. That already keeps tail calls flat -- the last form hands back
+    // a tailcall object, which is self-contained (an evaluated function plus
+    // evaluated arguments) and travels up to the nearest trampoline while this
+    // frame returns. Wrapping the body in a closure instead, as this used to
+    // do for the tail case, deferred the *whole* body into the trampoline's
+    // lisp_apply, so a `break` or `continue` inside the body of a
+    // tail-position `let` crossed a function boundary and was rejected with
+    // "function call: unexpected control flow signal".
     body = CDR(args);
-    if (istail) {
-        SExpRef closure = new_lambda(interp, NIL, body, env);
-        ret = new_tailcall(interp, closure, NIL);
-        goto end;
-    }
     iter = body;
     while (!NILP(iter)) {
         exp = CAR(iter);

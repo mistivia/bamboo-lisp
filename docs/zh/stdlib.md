@@ -7,7 +7,11 @@
 
 - `(+ ...)`、`(- ...)`、`(* ...)`、`(/ ...)` —— 加、减、乘、除。`/` 在结果
   非整数时返回实数。
-- `(i/ a b)` —— 整数除法；`(mod a b)` —— 取模。
+- `(i/ a b)` —— 整数除法（向零截断）。
+- `(mod a b)` —— 向下取整的取模，结果符号跟除数，`(mod -3 100)` 得 `97`
+  （与 Common Lisp / Emacs Lisp 一致）。
+- `(rem a b)` —— 截断取余，结果符号跟被除数，`(rem -3 100)` 得 `-3`（与 C 一致）。
+- 除数为 0 时返回错误，而不是崩溃。
 - `(abs x)`、`(min ...)`、`(max ...)`。
 - `(floor x)`、`(ceiling x)`、`(round x)`、`(truncate x)`。
 - `(expt b e)` / `(pow b e)`、`(sqrt x)`、`(cbrt x)`、`(exp x)`、`(ln x)`、
@@ -38,7 +42,10 @@
 - 高阶：`(map f lst)`、`(filter pred lst)`、`(remove pred lst)`、
   `(count pred lst)`、`(foreach f lst)`、`(foldl f init lst)`。
 - prelude：`(find x lst)`、`(take n lst)`、`(drop n lst)`、
-  `(take-while pred lst)`、`(drop-while pred lst)`、`(sublist start end lst)`。
+  `(take-while pred lst)`、`(drop-while pred lst)`、`(sublist start end lst)`、
+  `(sort lst pred)` —— 稳定归并排序，`pred` 为「严格小于」；
+  `(merge-sorted a b pred)` —— 合并两个已排序列表。
+- prelude 转换：`(list->vector lst)`、`(vector->list vec)`。
 
 ## 字符串
 
@@ -48,6 +55,12 @@
   形式（字符串不带引号）。两者都写到标准输出。
 - 比较：`string=`、`string/=`、`string<`、`string>`、`string<=`、`string>=`。
 - `(split-string s sep)`、`(strip-string s)`。
+- `(string-length s)`、`(string-ref s i)` —— 取第 `i` 个字符。
+- `(substring s start)` / `(substring s start end)` —— `end` 默认为字符串末尾，
+  下标必须在范围内。
+- `(string->list s)`、`(list->string chars)`。
+- `(string->number s)` —— 返回整数或实数；`s`（忽略首尾空白）不是数字时返回
+  `nil`。`(number->string n)`。
 
 ## 字符
 
@@ -77,6 +90,8 @@
 
 - `(when test body...)`、`(unless test body...)`。
 - `(incq place)`、`(decq place)` —— 原地自增 / 自减。
+- `(dolist (x lst) body...)`、`(dotimes (i n) body...)` —— 循环。游标与计数器
+  在 body 之前推进，因此 `break` / `continue` 的行为与直接写 `while` 一致。
 - `(pcase ...)` —— 模式匹配（见[语言参考](language.md)）。
 
 ---
@@ -87,7 +102,7 @@
 
 ## 可变数组（`vector.c`）
 
-- `(make-vector)`、`(vector? x)`。
+- `(make-vector)` / `(make-vector size)` / `(make-vector size fill)`、`(vector? x)`。
 - `(vector-length v)`、`(vector-ref v i)`、`(vector-set v i x)`。
 - `(vector-append v x)`、`(vector-insert v i x)`、`(vector-remove v i)`。
 
@@ -103,5 +118,5 @@
 
 - `(open-file path mode)`、`(stream? x)`、`(stream-close s)`。
 - 读取：`(read-char s)`、`(read-line s)`、`(read-integer s)`、
-  `(read-number s)`、`(lines s)`。
+  `(read-number s)`、`(lines s)`。stream 参数可以省略，省略时读标准输入。
 - 写入：`(write-char s c)`、`(write-obj s x)`。

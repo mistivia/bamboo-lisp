@@ -9,6 +9,7 @@
 | `3.14`, `1e-3` | Real (floating point) |
 | `"hello\n"` | String (supports `\n`, `\t`, `\"`, `\\`, …) |
 | `#\a`, `#\newline`, `#\space`, `#\tab`, `#\return` | Character |
+| `#\(`, `#\)`, `#\;`, `#\#`, `#\ ` | Character (delimiters name themselves) |
 | `#t`, `#f` | Boolean true / false |
 | `foo`, `list->vec`, `+`, `char<=` | Symbol |
 | `(a b c)` | List / call |

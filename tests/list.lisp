@@ -95,3 +95,42 @@
 
 (assert (contains? 3 '(1 2 3 4)))
 (assert (not (contains? 3 '(1 2 4 5))))
+
+(assert (equal? '(1 2 3 3 5) (sort '(3 5 1 3 2) #'<)))
+(assert (equal? '(5 3 3 2 1) (sort '(3 5 1 3 2) #'>)))
+(assert (null? (sort nil #'<)))
+(assert (equal? '(1) (sort '(1) #'<)))
+(assert-error (sort '(1) 2))
+
+(let ((acc nil))
+  (dolist (x '(1 2 3))
+    (setq acc (cons x acc)))
+  (assert (equal? '(3 2 1) acc)))
+
+(let ((acc nil))
+  (dolist (x '(1 2 3 4))
+    (when (= x 2) (continue))
+    (when (= x 4) (break))
+    (setq acc (cons x acc)))
+  (assert (equal? '(3 1) acc)))
+
+(let ((acc nil))
+  (dotimes (i 4)
+    (setq acc (cons i acc)))
+  (assert (equal? '(3 2 1 0) acc)))
+
+(let ((acc nil))
+  (dotimes (i 5)
+    (when (= i 1) (continue))
+    (when (= i 3) (break))
+    (setq acc (cons i acc)))
+  (assert (equal? '(2 0) acc)))
+
+;; filter / remove keep (or drop) the elements themselves -- they used to
+;; return the predicate's return values instead.
+(assert (equal? '(2 4) (filter (lambda (x) (zero? (mod x 2))) '(1 2 3 4))))
+(assert (equal? '(1 3) (remove (lambda (x) (zero? (mod x 2))) '(1 2 3 4))))
+(assert (equal? (list #\a #\a) (filter (lambda (c) (char= c #\a)) (list #\a #\b #\a))))
+(assert (null? (filter #'plus? '(-1 -2))))
+(assert (null? (remove #'plus? '(1 2))))
+(assert (= 2 (count (lambda (x) (zero? (mod x 2))) '(1 2 3 4))))

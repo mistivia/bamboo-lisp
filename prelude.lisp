@@ -100,6 +100,72 @@
     (setq lst (cdr lst)))
   #f)
 
+;; (dolist (x lst) body...) -- iterate over a list.
+;; The cursor is advanced before the body runs, so `continue` and `break`
+;; behave like in a plain `while` loop.
+(defmacro dolist (spec . body)
+  (let ((cursor (gensym)))
+    `(let ((,cursor ,(cadr spec)))
+       (while (not (null? ,cursor))
+         (let ((,(car spec) (car ,cursor)))
+           (setq ,cursor (cdr ,cursor))
+           ,@body)))))
+
+;; (dotimes (i n) body...) -- iterate with i = 0 .. n-1.
+;; The counter lives in a hidden variable that the body cannot clobber, and is
+;; bumped before the body runs, so `continue` cannot spin forever.
+(defmacro dotimes (spec . body)
+  (let ((counter (gensym))
+        (limit (gensym)))
+    `(let ((,counter 0)
+           (,limit ,(cadr spec)))
+       (while (< ,counter ,limit)
+         (let ((,(car spec) ,counter))
+           (setq ,counter (+ ,counter 1))
+           ,@body)))))
+
+(defun merge-sorted (a b pred)
+  (let ((out nil))
+    (while (and (not (null? a)) (not (null? b)))
+      ;; take from `a` unless `b` is strictly smaller, so the sort is stable
+      (if (funcall pred (car b) (car a))
+          (progn (setq out (cons (car b) out))
+                 (setq b (cdr b)))
+          (progn (setq out (cons (car a) out))
+                 (setq a (cdr a)))))
+    (while (not (null? a))
+      (setq out (cons (car a) out))
+      (setq a (cdr a)))
+    (while (not (null? b))
+      (setq out (cons (car b) out))
+      (setq b (cdr b)))
+    (nreverse out)))
+
+;; Stable merge sort. PRED is a "strictly less" predicate.
+(defun sort (lst pred)
+  (unless (list? lst)
+    (error "sort: type error."))
+  (unless (function? pred)
+    (error "sort: type error."))
+  (if (or (null? lst) (null? (cdr lst)))
+      lst
+      (let ((half (i/ (length lst) 2)))
+        (merge-sorted (sort (take half lst) pred)
+                      (sort (drop half lst) pred)
+                      pred))))
+
+(defun list->vector (lst)
+  (let ((vec (make-vector)))
+    (dolist (x lst)
+      (vector-append vec x))
+    vec))
+
+(defun vector->list (vec)
+  (let ((lst nil))
+    (dotimes (i (vector-length vec))
+      (setq lst (cons (vector-ref vec i) lst)))
+    (nreverse lst)))
+
 (defun caar (x) (car (car x)))
 (defun cadr (x) (car (cdr x)))
 (defun cddr (x) (cdr (cdr x)))

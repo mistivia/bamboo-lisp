@@ -17,12 +17,28 @@ static SExpRef is_vector(Interp* interp, SExpRef args) {
     return new_boolean(interp, is_vector_impl(interp, CAR(args)));
 }
 
+// (make-vector) / (make-vector size) / (make-vector size fill)
 static SExpRef make_vector(Interp* interp, SExpRef args) {
+    int argnum = LENGTH(args);
+    if (argnum > 2) return new_error(interp, "make-vector: wrong args num.\n");
+    int64_t size = 0;
+    SExpRef fill = NIL;
+    if (argnum >= 1) {
+        if (VALTYPE(CAR(args)) != kIntegerSExp) {
+            return new_error(interp, "make-vector: size is not an integer.\n");
+        }
+        size = REF(CAR(args))->integer;
+        if (size < 0) return new_error(interp, "make-vector: negative size.\n");
+    }
+    if (argnum == 2) fill = CADR(args);
     SExpRef ret = new_sexp(interp);
     REF(ret)->type = kUserDataSExp;
     REF(ret)->userdata_meta = &bamboo_lisp_array_meta;
     SExpRefVector *data = malloc(sizeof(SExpRefVector));
     SExpRefVector_init(data);
+    for (int64_t i = 0; i < size; i++) {
+        SExpRefVector_push_back(data, fill);
+    }
     REF(ret)->userdata = data;
     return ret;
 }
@@ -33,10 +49,9 @@ static SExpRef ext_vector_ref(Interp* interp, SExpRef args) {
             || REF(CADR(args))->type != kIntegerSExp) {
         return new_error(interp, "vector-ref: wrong type.\n");
     }
-    int n = REF(CADR(args))->integer;
+    int64_t n = REF(CADR(args))->integer;
     SExpRefVector *vec = REF(CAR(args))->userdata;
-    if (n >= SExpRefVector_len(vec)) return new_error(interp, "vector-ref: out of bound.\n");
-    SExpRef ret = new_sexp(interp);
+    if (n < 0 || n >= SExpRefVector_len(vec)) return new_error(interp, "vector-ref: out of bound.\n");
     return *SExpRefVector_ref(vec, n);
 }
 
@@ -55,8 +70,9 @@ static SExpRef ext_vector_insert(Interp* interp, SExpRef args) {
     if (!is_vector_impl(interp, CAR(args)) || REF(CADR(args))->type != kIntegerSExp)
         return new_error(interp, "vector-insert: wrong types.\n");
 
-    int pos = REF(CADR(args))->integer;
+    int64_t pos = REF(CADR(args))->integer;
     SExpRefVector *vec = REF(CAR(args))->userdata;
+    if (pos < 0 || pos > SExpRefVector_len(vec)) return new_error(interp, "vector-insert: out of bound.\n");
     SExpRef elem = CADDR(args);
     SExpRefVector_insert_before(vec, pos, elem);
     return NIL;
@@ -67,9 +83,9 @@ static SExpRef ext_vector_delete(Interp* interp, SExpRef args) {
     if (!is_vector_impl(interp, CAR(args)) || REF(CADR(args))->type != kIntegerSExp)
         return new_error(interp, "vector-remove: wrong types.\n");
 
-    int pos = REF(CADR(args))->integer;
+    int64_t pos = REF(CADR(args))->integer;
     SExpRefVector *vec = REF(CAR(args))->userdata;
-    if (pos >= SExpRefVector_len(vec)) return new_error(interp, "vector-remove: out of bound.\n");
+    if (pos < 0 || pos >= SExpRefVector_len(vec)) return new_error(interp, "vector-remove: out of bound.\n");
     SExpRefVector_remove(vec, pos);
     return NIL;
 }
@@ -87,9 +103,9 @@ static SExpRef ext_vector_set(Interp* interp, SExpRef args) {
     if (!is_vector_impl(interp, CAR(args)) || REF(CADR(args))->type != kIntegerSExp)
         return new_error(interp, "vector-set: wrong types.\n");
 
-    int pos = REF(CADR(args))->integer;
+    int64_t pos = REF(CADR(args))->integer;
     SExpRefVector *vec = REF(CAR(args))->userdata;
-    if (pos >= SExpRefVector_len(vec)) return new_error(interp, "vector-set: out of bound.\n");
+    if (pos < 0 || pos >= SExpRefVector_len(vec)) return new_error(interp, "vector-set: out of bound.\n");
 
     *SExpRefVector_ref(vec, pos) = CADDR(args);
     return NIL;

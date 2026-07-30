@@ -305,6 +305,14 @@ static char *read_token(Parser *parser) {
         parser->token_buf[i] = Parser_getchar(parser);
         i++;
     }
+    // A character literal names its character, even when that character is one
+    // of the delimiters the loop above stops at: #\( #\) #\" #\; #\# and #\
+    // (a space) would otherwise come out as a bare "#\" and fail to parse.
+    if (i == 2 && parser->token_buf[0] == '#' && parser->token_buf[1] == '\\'
+            && Parser_peek(parser) != EOF) {
+        parser->token_buf[i] = Parser_getchar(parser);
+        i++;
+    }
     if (i > 1022) return NULL;
     parser->token_buf[i] = '\0';
     return parser->token_buf;

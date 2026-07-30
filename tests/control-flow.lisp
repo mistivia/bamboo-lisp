@@ -89,3 +89,27 @@
     (setq flag 1))))
 
 (assert (= flag 1))
+
+;; break / continue must survive nested `let`s. A `let` in tail position used
+;; to defer its body into a synthetic closure, which turned these into
+;; "function call: unexpected control flow signal".
+(defun break-through-lets (n)
+  (let ((i 0) (sum 0))
+    (while (< i n)
+      (let ((a i))
+        (setq i (+ i 1))
+        (let ((b a))
+          (when (= b 3) (continue))
+          (when (= b 6) (break))
+          (setq sum (+ sum b)))))
+    sum))
+(assert (= 12 (break-through-lets 10)))   ; 0+1+2+4+5
+
+(let ((hit nil))
+  (while #t
+    (let ((a 1))
+      (let ((b 2))
+        (let ((c 3))
+          (setq hit (+ a b c))
+          (break)))))
+  (assert (= 6 hit)))

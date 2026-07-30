@@ -32,3 +32,14 @@
 (assert (not (alphabetic? #\1)))
 (assert (not (alphanum? #\,)))
 
+
+;; Delimiters are valid character literals too; the reader used to choke on
+;; these because the token scanner stopped at the delimiter.
+(assert (char= #\( (string-ref "(" 0)))
+(assert (char= #\) (string-ref ")" 0)))
+(assert (char= #\" (string-ref "\"" 0)))
+(assert (char= #\; (string-ref ";" 0)))
+(assert (char= #\# (string-ref "#" 0)))
+(assert (char= #\  #\space))
+(assert (= 40 (char->int #\()))
+(assert (equal? (list #\( #\)) (string->list "()")))

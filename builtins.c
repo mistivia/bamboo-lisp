@@ -3,6 +3,8 @@
 #include "sexp.h"
 #include <algds/str.h>
 #include <ctype.h>
+#include <errno.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <float.h>
 #include <math.h>
@@ -449,13 +451,13 @@ SExpRef builtin_map(Interp *interp, SExpRef args) {
 }
 
 SExpRef builtin_filter(Interp *interp, SExpRef args) {
-    if (LENGTH(args) != 2) return new_error(interp, "map: wrong arg num.\n");
+    if (LENGTH(args) != 2) return new_error(interp, "filter: wrong arg num.\n");
     SExpRef fn = CAR(args), lst = CADR(args);
     if (VALTYPE(fn) != kFuncSExp && VALTYPE(fn) != kUserFuncSExp) {
-        return new_error(interp, "map: type error.\n");
+        return new_error(interp, "filter: type error.\n");
     }
     if (!lisp_check_list(interp, lst)) {
-        return new_error(interp, "map: type error.");
+        return new_error(interp, "filter: type error.");
     }
     SExpRef newlst = NIL;
     for (SExpRef i = lst; !NILP(i); i = CDR(i)) {
@@ -465,7 +467,7 @@ SExpRef builtin_filter(Interp *interp, SExpRef args) {
         POP_REG();
         if (CTL_FL(pred)) return pred;
         if (TRUEP(pred)) {
-            newlst = CONS(pred, newlst);
+            newlst = CONS(x, newlst);
         }
     }
     return lisp_nreverse(interp, newlst);
@@ -488,7 +490,7 @@ SExpRef builtin_remove(Interp *interp, SExpRef args) {
         POP_REG();
         if (CTL_FL(pred)) return pred;
         if (!TRUEP(pred)) {
-            newlst = CONS(pred, newlst);
+            newlst = CONS(x, newlst);
         }
     }
     return lisp_nreverse(interp, newlst);
@@ -712,6 +714,127 @@ SExpRef builtin_strip_string(Interp *interp, SExpRef args) {
     SExpRef ret = new_string(interp, news);
     free(news);
     return ret;
+}
+
+SExpRef builtin_string_length(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "string-length: arg num error.\n");
+    SExpRef s = CAR(args);
+    if (VALTYPE(s) != kStringSExp) return new_error(interp, "string-length: type error.\n");
+    return new_integer(interp, strlen(REF(s)->str));
+}
+
+SExpRef builtin_string_ref(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 2) return new_error(interp, "string-ref: arg num error.\n");
+    SExpRef s = CAR(args), n = CADR(args);
+    if (VALTYPE(s) != kStringSExp || VALTYPE(n) != kIntegerSExp) {
+        return new_error(interp, "string-ref: type error.\n");
+    }
+    int64_t idx = REF(n)->integer;
+    if (idx < 0 || idx >= (int64_t)strlen(REF(s)->str)) {
+        return new_error(interp, "string-ref: out of bound.\n");
+    }
+    return new_char(interp, REF(s)->str[idx]);
+}
+
+SExpRef builtin_substring(Interp *interp, SExpRef args) {
+    int argnum = LENGTH(args);
+    if (argnum != 2 && argnum != 3) return new_error(interp, "substring: arg num error.\n");
+    SExpRef s = CAR(args);
+    if (VALTYPE(s) != kStringSExp || VALTYPE(CADR(args)) != kIntegerSExp) {
+        return new_error(interp, "substring: type error.\n");
+    }
+    int64_t len = strlen(REF(s)->str);
+    int64_t start = REF(CADR(args))->integer;
+    int64_t end = len;
+    if (argnum == 3) {
+        if (VALTYPE(CADDR(args)) != kIntegerSExp) {
+            return new_error(interp, "substring: type error.\n");
+        }
+        end = REF(CADDR(args))->integer;
+    }
+    if (start < 0 || end > len || start > end) {
+        return new_error(interp, "substring: out of bound.\n");
+    }
+    char *buf = malloc(end - start + 1);
+    memcpy(buf, REF(s)->str + start, end - start);
+    buf[end - start] = '\0';
+    SExpRef ret = new_string(interp, buf);
+    free(buf);
+    return ret;
+}
+
+SExpRef builtin_string2list(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "string->list: arg num error.\n");
+    SExpRef s = CAR(args);
+    if (VALTYPE(s) != kStringSExp) return new_error(interp, "string->list: type error.\n");
+    const char *str = REF(s)->str;
+    int64_t len = strlen(str);
+    SExpRef lst = NIL;
+    for (int64_t i = len - 1; i >= 0; i--) {
+        lst = CONS(new_char(interp, str[i]), lst);
+    }
+    return lst;
+}
+
+SExpRef builtin_list2string(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "list->string: arg num error.\n");
+    SExpRef lst = CAR(args);
+    if (!NILP(lst) && VALTYPE(lst) != kPairSExp) {
+        return new_error(interp, "list->string: type error.\n");
+    }
+    int len = LENGTH(lst);
+    char *buf = malloc(len + 1);
+    int i = 0;
+    for (SExpRef cur = lst; !NILP(cur); cur = CDR(cur)) {
+        if (VALTYPE(CAR(cur)) != kCharSExp) {
+            free(buf);
+            return new_error(interp, "list->string: not a char list.\n");
+        }
+        buf[i++] = REF(CAR(cur))->character;
+    }
+    buf[i] = '\0';
+    SExpRef ret = new_string(interp, buf);
+    free(buf);
+    return ret;
+}
+
+// Parse a string as a number. Returns nil when the whole string (ignoring
+// surrounding spaces) is not a valid integer or real.
+SExpRef builtin_string2number(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "string->number: arg num error.\n");
+    SExpRef s = CAR(args);
+    if (VALTYPE(s) != kStringSExp) return new_error(interp, "string->number: type error.\n");
+    const char *str = REF(s)->str;
+    while (isspace((unsigned char)*str)) str++;
+    if (*str == '\0') return NIL;
+    char *end;
+    errno = 0;
+    long long ival = strtoll(str, &end, 10);
+    if (errno == 0 && end != str) {
+        const char *rest = end;
+        while (isspace((unsigned char)*rest)) rest++;
+        if (*rest == '\0') return new_integer(interp, ival);
+    }
+    errno = 0;
+    double dval = strtod(str, &end);
+    if (errno != 0 || end == str) return NIL;
+    while (isspace((unsigned char)*end)) end++;
+    if (*end != '\0') return NIL;
+    return new_real(interp, dval);
+}
+
+SExpRef builtin_number2string(Interp *interp, SExpRef args) {
+    if (LENGTH(args) != 1) return new_error(interp, "number->string: arg num error.\n");
+    SExpRef n = CAR(args);
+    char buf[64];
+    if (VALTYPE(n) == kIntegerSExp) {
+        snprintf(buf, sizeof(buf), "%" PRId64, REF(n)->integer);
+    } else if (VALTYPE(n) == kRealSExp) {
+        snprintf(buf, sizeof(buf), "%g", REF(n)->real);
+    } else {
+        return new_error(interp, "number->string: type error.\n");
+    }
+    return new_string(interp, buf);
 }
 
 SExpRef builtin_alwaysgc(Interp *interp, SExpRef args) {
@@ -1144,7 +1267,18 @@ static SExp raw_idiv(SExp a, SExp b) {
     return (SExp){ .type = kIntegerSExp, .integer = lhs / rhs};
 }
 
+// Floored modulo, as in Common Lisp / Emacs Lisp: the result has the sign of
+// the divisor, so (mod -3 100) is 97. See raw_rem for the C-style remainder.
 static SExp raw_mod(SExp a, SExp b) {
+    int64_t lhs, rhs, r;
+    lhs = a.integer;
+    rhs = b.integer;
+    r = lhs % rhs;
+    if (r != 0 && ((r < 0) != (rhs < 0))) r += rhs;
+    return (SExp){ .type = kIntegerSExp, .integer = r};
+}
+
+static SExp raw_rem(SExp a, SExp b) {
     int64_t lhs, rhs;
     lhs = a.integer;
     rhs = b.integer;
@@ -1254,6 +1388,7 @@ SExpRef builtin_idiv(Interp *interp, SExpRef args) {
     }
     int args_len = LENGTH(args);
     if (args_len == 2) {
+        if (REF(CADR(args))->integer == 0) return new_error(interp, "i/: division by zero.\n");
         SExp num = raw_idiv(*REF(CAR(args)), *REF(CADR(args)));
         ret = new_sexp(interp);
         *REF(ret) = num;
@@ -1273,12 +1408,33 @@ SExpRef builtin_mod(Interp *interp, SExpRef args) {
     }
     int args_len = LENGTH(args);
     if (args_len == 2) {
+        if (REF(CADR(args))->integer == 0) return new_error(interp, "mod: division by zero.\n");
         SExp num = raw_mod(*REF(CAR(args)), *REF(CADR(args)));
         ret = new_sexp(interp);
         *REF(ret) = num;
         return ret;
     }
     return new_error(interp, "mod: wrong argument number.\n");
+}
+
+SExpRef builtin_rem(Interp *interp, SExpRef args) {
+    SExpRef ret;
+    SExpRef cur = args;
+    while (!NILP(cur)) {
+        if (REF(CAR(cur))->type != kIntegerSExp) {
+            return new_error(interp, "rem: wrong argument type.\n");
+        }
+        cur = CDR(cur);
+    }
+    int args_len = LENGTH(args);
+    if (args_len == 2) {
+        if (REF(CADR(args))->integer == 0) return new_error(interp, "rem: division by zero.\n");
+        SExp num = raw_rem(*REF(CAR(args)), *REF(CADR(args)));
+        ret = new_sexp(interp);
+        *REF(ret) = num;
+        return ret;
+    }
+    return new_error(interp, "rem: wrong argument number.\n");
 }
 
 SExpRef builtin_not(Interp *interp, SExpRef args) {

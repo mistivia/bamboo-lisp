@@ -197,9 +197,9 @@ static SExpRef ext_read_line(Interp* interp, SExpRef args) {
     return NIL;
 }
 
-// (lines stream) -> list of strings
+// (lines [stream]) -> list of strings
 static SExpRef ext_lines(Interp* interp, SExpRef args) {
-    if (LENGTH(args) != 1) return new_error(interp, "lines: wrong args num.\n");
+    if (LENGTH(args) > 1) return new_error(interp, "lines: too many args.\n");
     
     FILE *fp = get_input_stream(interp, args, "lines");
     if (!fp) return NIL;

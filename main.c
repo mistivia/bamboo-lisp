@@ -31,6 +31,10 @@ int main(int argc, char **argv) {
             interp.stacktrace = interp.nil;
             mainret = -1; goto end;
         }
+        // Running a script is not a prelude to the REPL: stop here, so that
+        // script output is not followed by a prompt (and so that a script
+        // reading stdin does not hand the rest of stdin to the reader).
+        goto end;
     }
 #ifdef WITHREADLINE
     Parser_set_readline(interp.parser);

@@ -185,10 +185,18 @@ void Interp_init(Interp *self) {
     Interp_add_userfunc(self, "string/=", builtin_string_neq);
     Interp_add_userfunc(self, "split-string", builtin_split_string);
     Interp_add_userfunc(self, "strip-string", builtin_strip_string);
+    Interp_add_userfunc(self, "string-length", builtin_string_length);
+    Interp_add_userfunc(self, "string-ref", builtin_string_ref);
+    Interp_add_userfunc(self, "substring", builtin_substring);
+    Interp_add_userfunc(self, "string->list", builtin_string2list);
+    Interp_add_userfunc(self, "list->string", builtin_list2string);
+    Interp_add_userfunc(self, "string->number", builtin_string2number);
+    Interp_add_userfunc(self, "number->string", builtin_number2string);
     Interp_add_userfunc(self, "print", builtin_print);
     Interp_add_userfunc(self, "format", builtin_format);
     Interp_add_userfunc(self, "truncate", builtin_truncate);
     Interp_add_userfunc(self, "mod", builtin_mod);
+    Interp_add_userfunc(self, "rem", builtin_rem);
     Interp_add_userfunc(self, "+", builtin_add);
     Interp_add_userfunc(self, "-", builtin_sub);
     Interp_add_userfunc(self, "*", builtin_mul);
